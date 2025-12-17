@@ -37,15 +37,32 @@ const translations = {
     codePlaceholder: "Paste your plotting code here...",
     requiredFields: "Please fill in all required fields (Title, Code, Image)",
     deleteConfirm: "Are you sure you want to delete this template?",
-    // Modal
+    // Membership Keys
+    adminDashboard: "Admin Dashboard",
+    tabUpload: "Upload Template",
+    tabKeys: "Membership Keys",
+    generateKey: "Generate Key",
+    keyGenerated: "New key generated",
+    noKeys: "No active membership keys.",
+    keyColumnCode: "Code",
+    keyColumnDate: "Created At",
+    keyColumnStatus: "Status",
+    // Modal & Locking
     copyCode: "Copy Code",
     copied: "Copied!",
     copyClipboard: "I want this style",
     copiedClipboard: "Copied to Clipboard",
     remove: "Remove",
-    codeHidden: "Source code is hidden.",
-    codeHiddenDesc: "Use the 'I want this style' button to get the code.",
-    enlargePreview: "Enlarge Preview"
+    codeHidden: "Source code is locked.",
+    codeHiddenDesc: "Please enter a valid membership code to unlock.",
+    enlargePreview: "Enlarge Preview",
+    enterMemberCode: "Enter Member Code",
+    unlock: "Unlock",
+    unlockSuccess: "Unlocked successfully!",
+    unlockFail: "Invalid code",
+    verify: "Verify",
+    lockedContent: "Content Locked",
+    lockedContentDesc: "This high-quality template requires a membership code to view the source."
   },
   zh: {
     appTitle: "SciPlot Hub",
@@ -81,15 +98,32 @@ const translations = {
     codePlaceholder: "在此粘贴您的绘图代码...",
     requiredFields: "请填写所有必填字段（标题、代码、图片）",
     deleteConfirm: "确定要删除此模板吗？",
-    // Modal
+    // Membership Keys
+    adminDashboard: "管理后台",
+    tabUpload: "上传模板",
+    tabKeys: "会员码管理",
+    generateKey: "生成会员码",
+    keyGenerated: "新会员码已生成",
+    noKeys: "暂无有效会员码。",
+    keyColumnCode: "卡密",
+    keyColumnDate: "创建时间",
+    keyColumnStatus: "状态",
+    // Modal & Locking
     copyCode: "复制代码",
     copied: "已复制!",
     copyClipboard: "想要同款",
     copiedClipboard: "已复制到剪贴板",
     remove: "移除",
-    codeHidden: "源代码已隐藏。",
-    codeHiddenDesc: "点击“想要同款”按钮获取代码。",
-    enlargePreview: "放大预览"
+    codeHidden: "源代码已锁定。",
+    codeHiddenDesc: "请输入有效的会员码以解锁。",
+    enlargePreview: "放大预览",
+    enterMemberCode: "输入会员码",
+    unlock: "解锁",
+    unlockSuccess: "解锁成功！",
+    unlockFail: "无效的会员码",
+    verify: "验证",
+    lockedContent: "内容已锁定",
+    lockedContentDesc: "查看此优质模板源码需要会员码验证。"
   }
 };
 
