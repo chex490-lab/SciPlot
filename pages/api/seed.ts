@@ -17,6 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     `;
 
+    // MIGRATION: Add new columns if they don't exist
+    await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS code_content TEXT;`;
+    await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS download_url TEXT;`;
+
     // 2. Access Keys Table (Advanced)
     await sql`
       CREATE TABLE IF NOT EXISTS access_keys (
@@ -47,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Enable UUID extension
     await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`;
 
-    return res.status(200).json({ message: 'Database tables initialized successfully' });
+    return res.status(200).json({ message: 'Database tables initialized and updated successfully' });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

@@ -58,6 +58,7 @@ const translations = {
     copied: "Copied!",
     copyClipboard: "I want this style",
     copiedClipboard: "Copied to Clipboard",
+    codeCopiedToast: "Code copied! Go paste it now.",
     remove: "Remove",
     codeHidden: "Source code is locked.",
     codeHiddenDesc: "Please enter a valid membership code to unlock.",
@@ -68,7 +69,9 @@ const translations = {
     unlockFail: "Invalid code",
     verify: "Verify",
     lockedContent: "Content Locked",
-    lockedContentDesc: "This high-quality template requires a membership code to view the source."
+    lockedContentDesc: "This high-quality template requires a membership code to view the source.",
+    fullSourceCode: "Full Source Code (Hidden)",
+    fullSourceCodeDesc: "Paste the full runnable source code here. If empty, the preview code will be used."
   },
   zh: {
     appTitle: "SciPlot Hub",
@@ -125,6 +128,7 @@ const translations = {
     copied: "已复制!",
     copyClipboard: "想要同款",
     copiedClipboard: "已复制到剪贴板",
+    codeCopiedToast: "代码已复制，快去粘贴使用吧！",
     remove: "移除",
     codeHidden: "源代码已锁定。",
     codeHiddenDesc: "请输入有效的会员码以解锁。",
@@ -135,7 +139,9 @@ const translations = {
     unlockFail: "无效的会员码",
     verify: "验证",
     lockedContent: "内容已锁定",
-    lockedContentDesc: "查看此优质模板源码需要会员码验证。"
+    lockedContentDesc: "查看此优质模板源码需要会员码验证。",
+    fullSourceCode: "完整源代码（隐藏）",
+    fullSourceCodeDesc: "在此粘贴完整的可运行源代码。如留空，将使用预览代码。"
   }
 };
 

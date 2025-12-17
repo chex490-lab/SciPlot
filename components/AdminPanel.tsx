@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Template, AccessKey, UsageLog } from '../types';
 import { Button } from './Button';
-import { Image as ImageIcon, FileCode, Tag, Type, Key, Layout, Plus, ClipboardList, Activity, Timer, X, Settings, Database } from 'lucide-react';
+import { Image as ImageIcon, FileCode, Tag, Type, Key, Layout, Plus, ClipboardList, Activity, Timer, X, Settings, Database, FileText } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { backend } from '../services/backend';
 
@@ -62,6 +62,7 @@ const UploadForm: React.FC<{onAddTemplate: any, onClose: any}> = ({ onAddTemplat
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [code, setCode] = useState('');
+  const [codeContent, setCodeContent] = useState('');
   const [tags, setTags] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'r' | 'matlab' | 'latex'>('python');
@@ -90,7 +91,8 @@ const UploadForm: React.FC<{onAddTemplate: any, onClose: any}> = ({ onAddTemplat
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
       title,
       description,
-      code,
+      code, // Preview Code
+      codeContent: codeContent || code, // Full Code (fallback to preview if empty)
       imageUrl: previewUrl,
       language,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -101,7 +103,7 @@ const UploadForm: React.FC<{onAddTemplate: any, onClose: any}> = ({ onAddTemplat
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column: Meta Info */}
         <div className="space-y-6">
@@ -193,19 +195,32 @@ const UploadForm: React.FC<{onAddTemplate: any, onClose: any}> = ({ onAddTemplat
         </div>
 
         {/* Right Column: Code */}
-        <div className="flex flex-col h-full">
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            <div className="flex items-center gap-1.5"><FileCode size={14} /> {t.sourceCode}</div>
-          </label>
-          <div className="flex-grow relative">
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full min-h-[400px] px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm bg-slate-800 text-slate-200"
-              placeholder={t.codePlaceholder}
-              required
-              spellCheck={false}
-            />
+        <div className="flex flex-col gap-6 h-full">
+          <div className="flex-1 flex flex-col">
+             <label className="block text-sm font-semibold text-slate-700 mb-2">
+               <div className="flex items-center gap-1.5"><FileCode size={14} /> {t.sourceCode} (Preview)</div>
+             </label>
+             <textarea
+               value={code}
+               onChange={(e) => setCode(e.target.value)}
+               className="w-full flex-1 min-h-[200px] px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm bg-slate-800 text-slate-200"
+               placeholder={t.codePlaceholder}
+               required
+               spellCheck={false}
+             />
+          </div>
+          
+          <div className="flex-1 flex flex-col">
+             <label className="block text-sm font-semibold text-slate-700 mb-2">
+               <div className="flex items-center gap-1.5"><FileText size={14} /> {t.fullSourceCode}</div>
+             </label>
+             <textarea
+               value={codeContent}
+               onChange={(e) => setCodeContent(e.target.value)}
+               className="w-full flex-1 min-h-[200px] px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm bg-slate-900 text-emerald-300"
+               placeholder={t.fullSourceCodeDesc}
+               spellCheck={false}
+             />
           </div>
         </div>
       </div>

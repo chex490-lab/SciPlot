@@ -3,8 +3,11 @@ export interface Template {
   title: string;
   description: string;
   imageUrl: string;
-  code: string;
+  code: string; // Kept for backward compatibility/preview
+  codeContent?: string; // New: Full source code
+  downloadUrl?: string; // New: Link to file/zip
   language: 'python' | 'r' | 'matlab' | 'latex';
+  category?: string; // New: Mapped from language or specific category
   tags: string[];
   createdAt: number;
 }

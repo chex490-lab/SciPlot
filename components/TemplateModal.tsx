@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Template } from '../types';
-import { X, Copy, Check, ZoomIn, Lock, Unlock, Key } from 'lucide-react';
+import { X, Copy, Check, ZoomIn, Lock, Unlock, Key, ClipboardCopy } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../contexts/LanguageContext';
 import { backend } from '../services/backend';
@@ -19,20 +19,19 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
   const [verifyError, setVerifyError] = useState('');
   
   const [copied, setCopied] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
+  const [fullCode, setFullCode] = useState(template.codeContent || template.code);
   const { t } = useLanguage();
 
   const handleCopy = async () => {
-    if (!isUnlocked) {
-      setShowInput(true);
-      return;
-    }
-    await navigator.clipboard.writeText(template.code);
+    // If unlocked, just copy the currently visible code
+    await navigator.clipboard.writeText(fullCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleVerify = async (e?: React.FormEvent) => {
+  const handleGetCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!inputCode) return;
 
@@ -40,12 +39,20 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
     setVerifyError('');
 
     try {
-      const result = await backend.verifyKey(inputCode, template.title);
-      if (result.valid) {
+      const result = await backend.getCode(inputCode, template.id);
+      if (result.success && result.code) {
+        setFullCode(result.code);
         setIsUnlocked(true);
         setShowInput(false);
+        
+        // Auto copy to clipboard
+        await navigator.clipboard.writeText(result.code);
+        
+        // Show Toast
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
       } else {
-        setVerifyError(result.message || t.unlockFail);
+        setVerifyError(result.error || t.unlockFail);
       }
     } catch (error) {
       console.error(error);
@@ -70,6 +77,14 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
           >
             <X size={20} />
           </button>
+
+          {/* Toast Notification */}
+          {showToast && (
+             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top-4 fade-in duration-300">
+               <Check size={16} />
+               <span className="font-medium text-sm">{t.codeCopiedToast}</span>
+             </div>
+          )}
 
           {/* Main Content */}
           <div className="w-full flex flex-col bg-slate-50 h-full">
@@ -108,7 +123,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
               <div className="flex gap-2">
                 {!isUnlocked ? (
                   showInput ? (
-                    <form onSubmit={handleVerify} className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                    <form onSubmit={handleGetCode} className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
                       <div className="relative">
                         <Key size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
@@ -137,7 +152,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                       onClick={() => setShowInput(true)}
                       className="flex items-center gap-2 shadow-sm bg-slate-900 hover:bg-slate-800 text-white"
                     >
-                      <Lock size={16} />
+                      <ClipboardCopy size={16} />
                       {t.copyClipboard}
                     </Button>
                   )
@@ -167,6 +182,10 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                 <p className="text-slate-600 leading-relaxed text-sm mb-4">
                   {template.description}
                 </p>
+                {/* Error Message Display below description if input not visible */}
+                {verifyError && showInput && (
+                    <p className="text-red-500 text-xs mt-1 mb-2 animate-pulse">{verifyError}</p>
+                )}
                </div>
 
                {/* Code Section */}
@@ -179,7 +198,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                     
                     <div className="relative flex-grow overflow-auto custom-scrollbar bg-slate-800 p-4">
                       <pre className={`font-mono text-sm text-slate-300 ${!isUnlocked ? 'blur-sm opacity-50' : ''}`}>
-                        {template.code}
+                        {fullCode}
                       </pre>
                       
                       {/* Locked Overlay */}
@@ -191,13 +210,14 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                              </div>
                              <h3 className="text-white font-bold text-lg mb-2">{t.lockedContent}</h3>
                              <p className="text-slate-400 text-sm mb-4">
-                               {verifyError ? <span className="text-red-400">{verifyError}</span> : t.lockedContentDesc}
+                               {verifyError && !showInput ? <span className="text-red-400">{verifyError}</span> : t.lockedContentDesc}
                              </p>
                              <Button 
                                 size="sm" 
                                 onClick={() => setShowInput(true)}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 border-none"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 border-none flex items-center justify-center gap-2"
                               >
+                                <ClipboardCopy size={16} />
                                 {t.copyClipboard}
                               </Button>
                           </div>

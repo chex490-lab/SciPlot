@@ -5,15 +5,13 @@ let currentAuthToken: string | null = null;
 
 export const backend = {
   
-  // --- TEMPLATES ---
+  // --- TEMPLATES (LEGACY WRAPPERS) ---
   async getTemplates(): Promise<Template[]> {
     try {
       const res = await fetch('/api/templates');
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       
-      // Fallback: If DB is empty or API returns non-array (error), use initial mock data
-      // This ensures the preview works even if the DB isn't connected yet.
       if (Array.isArray(data) && data.length > 0) {
         return data;
       }
@@ -24,32 +22,63 @@ export const backend = {
     }
   },
 
+  // Legacy wrapper
   async addTemplate(template: Template): Promise<Template> {
     if (!currentAuthToken) throw new Error("Unauthorized");
-    
+    return this.createTemplate(template, currentAuthToken);
+  },
+
+  // Legacy wrapper
+  async deleteTemplate(id: string): Promise<void> {
+    if (!currentAuthToken) throw new Error("Unauthorized");
+    return this.deleteTemplateById(id, currentAuthToken);
+  },
+
+  // --- REQUESTED NEW METHODS ---
+
+  async verifyMemberCode(code: string): Promise<{valid: boolean, message?: string}> {
+    // Calls verifyKey with a generic title since this might be a general check
+    return this.verifyKey(code, 'General Verification');
+  },
+
+  async createTemplate(data: Template, token: string): Promise<Template> {
     const res = await fetch('/api/templates', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-auth': currentAuthToken
+        'x-admin-auth': token
       },
-      body: JSON.stringify(template)
+      body: JSON.stringify(data)
     });
     
-    if (!res.ok) throw new Error("Failed to add template");
+    if (!res.ok) throw new Error("Failed to create template");
     return await res.json();
   },
 
-  async deleteTemplate(id: string): Promise<void> {
-    if (!currentAuthToken) throw new Error("Unauthorized");
+  async updateTemplate(data: Template, token: string): Promise<Template> {
+    const res = await fetch('/api/templates', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-auth': token
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) throw new Error("Failed to update template");
+    return await res.json();
+  },
+
+  // Renamed to avoid conflict with existing deleteTemplate(id) signature if strict typing is needed, 
+  // or overloaded. Here we use a distinct name for the implementation.
+  async deleteTemplateById(id: string, token: string): Promise<void> {
     await fetch(`/api/templates?id=${id}`, {
       method: 'DELETE',
-      headers: { 'x-admin-auth': currentAuthToken }
+      headers: { 'x-admin-auth': token }
     });
   },
 
   // --- AUTH ---
-  // Modified to return object with success and message
   async login(password: string): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await fetch('/api/admin/login', {
@@ -153,6 +182,24 @@ export const backend = {
       return { valid: false, message: 'Server error' };
     } catch {
       return { valid: false, message: 'Network error' };
+    }
+  },
+
+  async getCode(memberCode: string, templateId: string): Promise<{success: boolean, code?: string, error?: string}> {
+    try {
+      const res = await fetch('/api/get-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberCode: memberCode.trim(), templateId })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        return { success: true, code: data.code };
+      }
+      return { success: false, error: data.error || 'Failed to retrieve code' };
+    } catch (e) {
+      return { success: false, error: 'Network error' };
     }
   }
 };
