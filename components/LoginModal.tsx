@@ -6,7 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface LoginModalProps {
   onLogin: (password: string) => void;
   onClose: () => void;
-  error?: boolean;
+  error?: string | boolean; // Changed to accept string for detailed messages
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose, error }) => {
@@ -43,7 +43,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin, onClose, error 
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               autoFocus
             />
-            {error && <p className="text-red-500 text-xs mt-1">{t.wrongPassword}</p>}
+            {error && (
+              <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
+                {typeof error === 'string' ? error : t.wrongPassword}
+              </div>
+            )}
           </div>
           
           <Button type="submit" className="w-full">

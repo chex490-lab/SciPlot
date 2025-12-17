@@ -15,7 +15,7 @@ export default function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loginError, setLoginError] = useState(false);
+  const [loginError, setLoginError] = useState<string | boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   
@@ -66,14 +66,14 @@ export default function App() {
   };
 
   const handleLogin = async (password: string) => {
-    const success = await backend.login(password);
-    if (success) {
+    const result = await backend.login(password);
+    if (result.success) {
       setIsAdmin(true);
       setShowLoginModal(false);
       setLoginError(false);
       setShowAdminPanel(true); // Automatically open panel on success login
     } else {
-      setLoginError(true);
+      setLoginError(result.message || true);
     }
   };
 

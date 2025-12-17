@@ -49,7 +49,8 @@ export const backend = {
   },
 
   // --- AUTH ---
-  async login(password: string): Promise<boolean> {
+  // Modified to return object with success and message
+  async login(password: string): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -57,15 +58,16 @@ export const backend = {
         body: JSON.stringify({ password })
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         currentAuthToken = data.token;
-        return true;
+        return { success: true };
       }
-      return false;
-    } catch (e) {
+      return { success: false, message: data.message || data.error || 'Login failed' };
+    } catch (e: any) {
       console.error("Login error", e);
-      return false;
+      return { success: false, message: e.message || "Network error" };
     }
   },
 
