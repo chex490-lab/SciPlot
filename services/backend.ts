@@ -69,8 +69,6 @@ export const backend = {
     return await res.json();
   },
 
-  // Renamed to avoid conflict with existing deleteTemplate(id) signature if strict typing is needed, 
-  // or overloaded. Here we use a distinct name for the implementation.
   async deleteTemplateById(id: string, token: string): Promise<void> {
     await fetch(`/api/templates?id=${id}`, {
       method: 'DELETE',
@@ -81,11 +79,20 @@ export const backend = {
   // --- AUTH ---
   async login(password: string): Promise<{ success: boolean; message?: string }> {
     try {
+      // Explicitly pointing to /api/admin/login as requested
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
+
+      // Handle non-JSON responses (like 404/500 HTML pages) to avoid "Unexpected token" errors
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Login failed. Server returned non-JSON:", text);
+        return { success: false, message: `Server Error (${res.status}): API not found or server error.` };
+      }
 
       const data = await res.json();
 
@@ -95,7 +102,7 @@ export const backend = {
       }
       return { success: false, message: data.message || data.error || 'Login failed' };
     } catch (e: any) {
-      console.error("Login error", e);
+      console.error("Login network error:", e);
       return { success: false, message: e.message || "Network error" };
     }
   },
