@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Template, AccessKey, UsageLog } from '../types';
 import { Button } from './Button';
-import { Image as ImageIcon, FileCode, Tag, Type, Key, Layout, Plus, ClipboardList, Activity, Timer, X } from 'lucide-react';
+import { Image as ImageIcon, FileCode, Tag, Type, Key, Layout, Plus, ClipboardList, Activity, Timer, X, Settings, Database } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { backend } from '../services/backend';
 
@@ -11,7 +11,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onAddTemplate, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'upload' | 'keys' | 'logs'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'keys' | 'logs' | 'system'>('upload');
   const { t } = useLanguage();
 
   return (
@@ -25,10 +25,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onAddTemplate, onClose }
        </div>
 
        {/* Tabs */}
-       <div className="flex border-b border-slate-200 px-6 gap-6">
+       <div className="flex border-b border-slate-200 px-6 gap-6 overflow-x-auto">
          <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')} icon={<Layout size={16} />} label={t.tabUpload} />
          <TabButton active={activeTab === 'keys'} onClick={() => setActiveTab('keys')} icon={<Key size={16} />} label={t.tabKeys} />
          <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} icon={<Activity size={16} />} label="Usage Logs" />
+         <TabButton active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={<Settings size={16} />} label={t.tabSystem} />
        </div>
 
        {/* Content Area */}
@@ -36,6 +37,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onAddTemplate, onClose }
          {activeTab === 'upload' && <UploadForm onAddTemplate={onAddTemplate} onClose={onClose} />}
          {activeTab === 'keys' && <KeysManager />}
          {activeTab === 'logs' && <LogsViewer />}
+         {activeTab === 'system' && <SystemSettings />}
        </div>
     </div>
   );
@@ -44,7 +46,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onAddTemplate, onClose }
 const TabButton = ({ active, onClick, icon, label }: any) => (
   <button
     onClick={onClick}
-    className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+    className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
       active 
         ? 'border-indigo-600 text-indigo-600' 
         : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -428,4 +430,42 @@ const LogsViewer: React.FC = () => {
         </div>
     </div>
   );
+};
+
+// --- Subcomponent: System Settings ---
+const SystemSettings: React.FC = () => {
+    const { t } = useLanguage();
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState<{success?: boolean, message?: string}>({});
+
+    const handleInitDb = async () => {
+        setLoading(true);
+        setStatus({});
+        const res = await backend.initializeDatabase();
+        setStatus(res);
+        setLoading(false);
+    };
+
+    return (
+        <div className="max-w-2xl mx-auto space-y-8 mt-8">
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-8 text-center">
+                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
+                    <Database size={32} className="text-indigo-600" />
+                 </div>
+                 <h2 className="text-xl font-bold text-slate-900 mb-2">{t.initDb}</h2>
+                 <p className="text-slate-500 mb-8 max-w-md mx-auto">
+                    {t.initDbDesc}
+                 </p>
+                 <Button onClick={handleInitDb} isLoading={loading} size="lg">
+                    {t.initDb}
+                 </Button>
+
+                 {status.message && (
+                     <div className={`mt-6 p-4 rounded-lg text-sm ${status.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                         {status.success ? t.initDbSuccess : `${t.initDbFail}: ${status.message}`}
+                     </div>
+                 )}
+            </div>
+        </div>
+    );
 };

@@ -3,7 +3,7 @@ import { sql } from '@vercel/postgres';
 import crypto from 'crypto';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const envPassword = process.env.ADMIN_PASSWORD || 'admin';
+  const envPassword = (process.env.ADMIN_PASSWORD || 'admin').trim();
   const serverToken = crypto.createHash('sha256').update(envPassword).digest('hex');
   const authHeader = req.headers['x-admin-auth'];
 

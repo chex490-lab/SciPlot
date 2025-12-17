@@ -124,6 +124,18 @@ export const backend = {
     return [];
   },
 
+  // --- SYSTEM ---
+  async initializeDatabase(): Promise<{success: boolean, message: string}> {
+    try {
+      const res = await fetch('/api/seed');
+      const data = await res.json();
+      if (res.ok) return { success: true, message: data.message };
+      return { success: false, message: data.error || 'Failed' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Network error' };
+    }
+  },
+
   // --- VERIFICATION (PUBLIC) ---
   async verifyKey(code: string, templateTitle: string): Promise<{valid: boolean, message?: string}> {
     try {

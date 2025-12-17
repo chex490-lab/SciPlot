@@ -4,7 +4,8 @@ import crypto from 'crypto';
 import { AccessKey } from '../../../types';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const envPassword = process.env.ADMIN_PASSWORD || 'admin';
+  // Ensure we use the exact same logic as login.ts
+  const envPassword = (process.env.ADMIN_PASSWORD || 'admin').trim();
   const serverToken = crypto.createHash('sha256').update(envPassword).digest('hex');
   const authHeader = req.headers['x-admin-auth'];
 
