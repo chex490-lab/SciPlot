@@ -1,48 +1,33 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyMemberCode, incrementCodeUsage, incrementTemplateUsage, logUsage } from '../lib/db';
+import { verifyMemberCode, incrementCodeUsage, logUsage } from '../lib/db';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
-  }
+export const config = {
+  runtime: 'edge',
+};
 
-  const { code, templateId, templateTitle } = req.body;
+export default async function handler(req: Request) {
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+
+  const { code, templateId } = await req.json();
+  const ip = req.headers.get('x-forwarded-for') || 'unknown';
 
   try {
-    const verification = await verifyMemberCode(code);
-
-    // Log the attempt (even failures if possible, but focusing on success flow first)
-    // Note: We need code_id for logging, which we only have if verification returned the code object.
+    const memberCode = await verifyMemberCode(code);
     
-    if (!verification.valid || !verification.memberCode) {
-       return res.status(400).json({ success: false, message: verification.message });
-    }
-
-    const memberCode = verification.memberCode;
-
-    // Execute updates
+    // Log success
     await incrementCodeUsage(memberCode.id);
-    await incrementTemplateUsage(templateId);
-    await logUsage({
-      codeId: memberCode.id,
-      templateId,
-      templateTitle,
-      success: true,
-      userIp: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress
-    });
+    await logUsage(memberCode.id, templateId, ip, true);
 
-    const remaining = memberCode.max_uses !== null 
-      ? memberCode.max_uses - (memberCode.used_count + 1) 
-      : null;
+    const remaining = memberCode.max_uses > 0 ? memberCode.max_uses - (memberCode.used_count + 1) : -1;
 
-    res.status(200).json({ 
+    return new Response(JSON.stringify({ 
       success: true, 
-      message: '验证成功',
-      remaining
-    });
+      remaining, 
+      expiresAt: memberCode.expires_at 
+    }), { headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
-    console.error(error);
-    res.status(500).json({ success: false, message: '服务器错误' });
+    // Log failure (try to find code id if possible, otherwise null)
+    // For simplicity, we skip specific ID logging on failure here or handle it generically
+    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 400 });
   }
 }

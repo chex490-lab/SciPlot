@@ -7,10 +7,31 @@ export interface Template {
   language: 'python' | 'r' | 'matlab' | 'latex';
   tags: string[];
   createdAt: number;
+  isActive?: boolean;
 }
 
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   isError?: boolean;
+}
+
+export interface MemberCode {
+  id: number;
+  code: string;
+  name: string;
+  max_uses: number;
+  used_count: number;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UsageLog {
+  id: number;
+  code: string;
+  template_title: string;
+  user_ip: string;
+  success: boolean;
+  created_at: string;
 }

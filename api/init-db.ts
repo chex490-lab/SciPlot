@@ -1,11 +1,19 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initDatabase } from '../lib/db';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req: Request) {
   try {
+    const authHeader = req.headers.get('Authorization');
+    // Simple protection for init
+    if (authHeader !== `Bearer ${process.env.ADMIN_PASSWORD}`) {
+       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
     await initDatabase();
-    res.status(200).json({ success: true, message: '数据库初始化成功' });
+    return new Response(JSON.stringify({ success: true }));
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }

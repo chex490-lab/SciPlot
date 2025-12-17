@@ -1,24 +1,38 @@
 import React, { useState } from 'react';
 import { Template } from '../types';
-import { X, Copy, Check, ZoomIn } from 'lucide-react';
+import { X, Copy, Check, ZoomIn, Lock } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface TemplateModalProps {
-  template: Template;
+  template: Template & { showCodeOverride?: boolean };
   isAdmin: boolean;
+  isVerified?: boolean;
   onClose: () => void;
+  onVerifyRequest?: () => void;
 }
 
-export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin, onClose }) => {
+export const TemplateModal: React.FC<TemplateModalProps> = ({ 
+  template, 
+  isAdmin, 
+  isVerified, 
+  onClose,
+  onVerifyRequest 
+}) => {
   const [copied, setCopied] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
   const { t } = useLanguage();
 
+  const canViewCode = isAdmin || isVerified || template.showCodeOverride;
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(template.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (canViewCode) {
+        await navigator.clipboard.writeText(template.code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    } else {
+        onVerifyRequest?.();
+    }
   };
 
   return (
@@ -37,9 +51,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
             <X size={20} />
           </button>
 
-          {/* Main Content */}
           <div className="w-full flex flex-col bg-slate-50 h-full">
-            {/* Image Section */}
             <div className="h-64 sm:h-96 bg-white relative bg-pattern group shrink-0 border-b border-slate-100">
                <div className="absolute inset-0 flex items-center justify-center p-6">
                  <img 
@@ -49,18 +61,8 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                    onClick={() => setShowZoom(true)}
                  />
                </div>
-               <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button 
-                    onClick={() => setShowZoom(true)}
-                    className="p-2 bg-black/50 text-white rounded-lg hover:bg-black/70 backdrop-blur-sm"
-                    title={t.enlargePreview}
-                 >
-                   <ZoomIn size={18} />
-                 </button>
-               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 gap-3 shrink-0">
               <Button 
                 variant="secondary" 
@@ -74,12 +76,11 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                 onClick={handleCopy} 
                 className={`flex items-center gap-2 shadow-sm ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
               >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                {copied ? t.copiedClipboard : t.copyClipboard}
+                {copied ? <Check size={16} /> : (canViewCode ? <Copy size={16} /> : <Lock size={16} />)}
+                {copied ? t.copied : (canViewCode ? t.copyCode : t.copyClipboard)}
               </Button>
             </div>
 
-            {/* Info Section */}
             <div className="p-6 overflow-y-auto flex-grow bg-slate-50">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{template.title}</h2>
               <div className="flex gap-2 mb-4">
@@ -89,26 +90,33 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({ template, isAdmin,
                   </span>
                 ))}
               </div>
-              <p className="text-slate-600 leading-relaxed text-sm">
+              <p className="text-slate-600 leading-relaxed text-sm mb-4">
                 {template.description}
               </p>
+              
+              {canViewCode ? (
+                <div className="relative">
+                    <pre className="bg-slate-800 text-slate-100 p-4 rounded-lg text-xs overflow-x-auto font-mono">
+                        {template.code}
+                    </pre>
+                </div>
+              ) : (
+                <div className="bg-slate-100 border border-slate-200 rounded-lg p-6 text-center">
+                    <Lock className="mx-auto text-slate-400 mb-2" size={24} />
+                    <p className="text-sm text-slate-500 font-medium">{t.codeHidden}</p>
+                    <p className="text-xs text-slate-400 mt-1">{t.codeHiddenDesc}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Image Zoom Modal */}
       {showZoom && (
         <div 
           className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setShowZoom(false)}
         >
-          <button 
-            className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-            onClick={() => setShowZoom(false)}
-          >
-            <X size={24} />
-          </button>
           <img 
             src={template.imageUrl} 
             alt={template.title}

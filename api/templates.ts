@@ -1,31 +1,68 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getAllTemplates, createTemplate } from '../lib/db';
+import { getAllTemplates, createTemplate, updateTemplate, deleteTemplate } from '../lib/db';
+import { isAuthenticated } from '../lib/auth';
+import { INITIAL_TEMPLATES } from '../constants';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req: Request) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+
+  // GET Public Templates
   if (req.method === 'GET') {
     try {
-      const category = Array.isArray(req.query.category) ? req.query.category[0] : req.query.category;
-      const templates = await getAllTemplates(category);
-      res.status(200).json({ success: true, data: templates });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      const isAdmin = await isAuthenticated(req);
+      // If admin, show all (including inactive), else show only active
+      const templates = await getAllTemplates(!isAdmin);
+      // Transform DB fields to frontend format
+      const formatted = templates.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        imageUrl: t.image_url,
+        code: t.code,
+        language: t.language,
+        tags: t.tags || [],
+        isActive: t.is_active,
+        createdAt: new Date(t.created_at).getTime()
+      }));
+      return new Response(JSON.stringify(formatted), { headers: { 'Content-Type': 'application/json' } });
+    } catch (e) {
+      console.error("Database error, returning mock templates:", e);
+      // Fallback to initial templates if database connection fails
+      return new Response(JSON.stringify(INITIAL_TEMPLATES), { headers: { 'Content-Type': 'application/json' } });
     }
-  } else if (req.method === 'POST') {
-    const adminAuth = req.headers['x-admin-auth']; // User simplified this in prev prompts, sticking to requested logic
-    // The requirement specified x-admin-password, let's support that
-    const adminPass = req.headers['x-admin-password'];
-    
-    if (adminPass !== process.env.ADMIN_PASSWORD && adminAuth !== process.env.ADMIN_PASSWORD) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  // Admin Only Operations
+  try {
+    if (!(await isAuthenticated(req))) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    try {
-      const template = await createTemplate(req.body);
-      res.status(201).json({ success: true, data: template });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+    if (req.method === 'POST') {
+      const body = await req.json();
+      const result = await createTemplate(body);
+      return new Response(JSON.stringify({ success: true, data: result }), { headers: { 'Content-Type': 'application/json' } });
     }
-  } else {
-    res.status(405).json({ success: false, error: 'Method not allowed' });
+
+    if (req.method === 'PUT') {
+      const body = await req.json();
+      if (!body.id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      await updateTemplate(body.id, body);
+      return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (req.method === 'DELETE') {
+      if (!id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      await deleteTemplate(id);
+      return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    }
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
+
+  return new Response('Method Not Allowed', { status: 405 });
 }
