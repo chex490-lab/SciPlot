@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Template } from './types';
+import { INITIAL_TEMPLATES } from './constants';
 import { TemplateCard } from './components/TemplateCard';
 import { TemplateModal } from './components/TemplateModal';
 import { AdminPanel } from './components/AdminPanel';
@@ -7,31 +8,19 @@ import { LoginModal } from './components/LoginModal';
 import { Button } from './components/Button';
 import { Search, Plus, LayoutGrid, Beaker, Globe, UserCog, LogOut } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
-import { backend } from './services/backend';
+
+const ADMIN_PASSWORD = 'admin';
 
 export default function App() {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<Template[]>(INITIAL_TEMPLATES);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loginError, setLoginError] = useState<string | boolean>(false);
+  const [loginError, setLoginError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
   
   const { t, language, setLanguage } = useLanguage();
-
-  // Load templates on mount
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const loadTemplates = async () => {
-    setLoading(true);
-    const data = await backend.getTemplates();
-    setTemplates(data);
-    setLoading(false);
-  };
 
   const filteredTemplates = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -42,45 +31,41 @@ export default function App() {
     );
   }, [templates, searchTerm]);
 
-  const handleAddTemplate = async (newTemplate: Template) => {
-    try {
-      const savedTemplate = await backend.addTemplate(newTemplate);
-      setTemplates(prev => [savedTemplate, ...prev]);
-      setShowAdminPanel(false);
-    } catch (e) {
-      alert("Failed to upload template");
-    }
+  const handleAddTemplate = (newTemplate: Template) => {
+    setTemplates(prev => [newTemplate, ...prev]);
+    setShowAdminPanel(false);
   };
   
-  const handleDeleteTemplate = async (id: string) => {
-    try {
-      await backend.deleteTemplate(id);
-      setTemplates(prev => prev.filter(t => t.id !== id));
-    } catch (e) {
-      alert("Failed to delete template");
-    }
+  const handleDeleteTemplate = (id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
   };
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'zh' : 'en');
   };
 
-  const handleLogin = async (password: string) => {
-    const result = await backend.login(password);
-    if (result.success) {
+  const handleAdminClick = () => {
+    if (isAdmin) {
+      setShowAdminPanel(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLogin = (password: string) => {
+    if (password === ADMIN_PASSWORD) {
       setIsAdmin(true);
       setShowLoginModal(false);
       setLoginError(false);
-      setShowAdminPanel(true); // Automatically open panel on success login
+      setShowAdminPanel(true); // Automatically open panel on success login if triggered by upload
     } else {
-      setLoginError(result.message || true);
+      setLoginError(true);
     }
   };
 
   const handleLogout = () => {
     setIsAdmin(false);
     setShowAdminPanel(false);
-    // Ideally we would also clear the token in backend service, but for this simple app state reset is enough
   };
 
   return (
@@ -153,17 +138,11 @@ export default function App() {
                 {t.availableTemplates}
               </h2>
               <span className="text-sm text-slate-500">
-                {loading ? 'Loading...' : `${filteredTemplates.length} ${filteredTemplates.length !== 1 ? t.results : t.result}`}
+                {filteredTemplates.length} {filteredTemplates.length !== 1 ? t.results : t.result}
               </span>
             </div>
 
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-                 {[1,2,3].map(i => (
-                   <div key={i} className="bg-slate-200 h-80 rounded-xl"></div>
-                 ))}
-              </div>
-            ) : filteredTemplates.length > 0 ? (
+            {filteredTemplates.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTemplates.map(template => (
                   <TemplateCard

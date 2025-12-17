@@ -37,41 +37,15 @@ const translations = {
     codePlaceholder: "Paste your plotting code here...",
     requiredFields: "Please fill in all required fields (Title, Code, Image)",
     deleteConfirm: "Are you sure you want to delete this template?",
-    // Membership Keys
-    adminDashboard: "Admin Dashboard",
-    tabUpload: "Upload Template",
-    tabKeys: "Membership Keys",
-    tabSystem: "System",
-    generateKey: "Generate Key",
-    keyGenerated: "New key generated",
-    noKeys: "No active membership keys.",
-    keyColumnCode: "Code",
-    keyColumnDate: "Created At",
-    keyColumnStatus: "Status",
-    // System
-    initDb: "Initialize Database",
-    initDbDesc: "Creates necessary tables (Templates, Access Keys, Logs) if they don't exist.",
-    initDbSuccess: "Database initialized successfully.",
-    initDbFail: "Initialization failed",
-    // Modal & Locking
+    // Modal
     copyCode: "Copy Code",
     copied: "Copied!",
     copyClipboard: "I want this style",
     copiedClipboard: "Copied to Clipboard",
-    codeCopiedToast: "Code copied! Go paste it now.",
     remove: "Remove",
-    codeHidden: "Source code is locked.",
-    codeHiddenDesc: "Please enter a valid membership code to unlock.",
-    enlargePreview: "Enlarge Preview",
-    enterMemberCode: "Enter Member Code",
-    unlock: "Unlock",
-    unlockSuccess: "Unlocked successfully!",
-    unlockFail: "Invalid code",
-    verify: "Verify",
-    lockedContent: "Content Locked",
-    lockedContentDesc: "This high-quality template requires a membership code to view the source.",
-    fullSourceCode: "Full Source Code (Hidden)",
-    fullSourceCodeDesc: "Paste the full runnable source code here. If empty, the preview code will be used."
+    codeHidden: "Source code is hidden.",
+    codeHiddenDesc: "Use the 'I want this style' button to get the code.",
+    enlargePreview: "Enlarge Preview"
   },
   zh: {
     appTitle: "SciPlot Hub",
@@ -107,41 +81,15 @@ const translations = {
     codePlaceholder: "在此粘贴您的绘图代码...",
     requiredFields: "请填写所有必填字段（标题、代码、图片）",
     deleteConfirm: "确定要删除此模板吗？",
-    // Membership Keys
-    adminDashboard: "管理后台",
-    tabUpload: "上传模板",
-    tabKeys: "会员码管理",
-    tabSystem: "系统设置",
-    generateKey: "生成会员码",
-    keyGenerated: "新会员码已生成",
-    noKeys: "暂无有效会员码。",
-    keyColumnCode: "卡密",
-    keyColumnDate: "创建时间",
-    keyColumnStatus: "状态",
-    // System
-    initDb: "初始化数据库",
-    initDbDesc: "如果表不存在，则创建必要的表（模板、会员码、日志）。",
-    initDbSuccess: "数据库初始化成功。",
-    initDbFail: "初始化失败",
-    // Modal & Locking
+    // Modal
     copyCode: "复制代码",
     copied: "已复制!",
     copyClipboard: "想要同款",
     copiedClipboard: "已复制到剪贴板",
-    codeCopiedToast: "代码已复制，快去粘贴使用吧！",
     remove: "移除",
-    codeHidden: "源代码已锁定。",
-    codeHiddenDesc: "请输入有效的会员码以解锁。",
-    enlargePreview: "放大预览",
-    enterMemberCode: "输入会员码",
-    unlock: "解锁",
-    unlockSuccess: "解锁成功！",
-    unlockFail: "无效的会员码",
-    verify: "验证",
-    lockedContent: "内容已锁定",
-    lockedContentDesc: "查看此优质模板源码需要会员码验证。",
-    fullSourceCode: "完整源代码（隐藏）",
-    fullSourceCodeDesc: "在此粘贴完整的可运行源代码。如留空，将使用预览代码。"
+    codeHidden: "源代码已隐藏。",
+    codeHiddenDesc: "点击“想要同款”按钮获取代码。",
+    enlargePreview: "放大预览"
   }
 };
 
