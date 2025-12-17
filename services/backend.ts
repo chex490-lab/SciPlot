@@ -79,7 +79,7 @@ export const backend = {
   // --- AUTH ---
   async login(password: string): Promise<{ success: boolean; message?: string }> {
     try {
-      // Explicitly pointing to /api/admin/login as requested
+      // Correct path as requested by user
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,9 +89,13 @@ export const backend = {
       // Handle non-JSON responses (like 404/500 HTML pages) to avoid "Unexpected token" errors
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
+        // If 404, it means the API route is not found
+        if (res.status === 404) {
+             return { success: false, message: `Error 404: API endpoint '/api/admin/login' not found.` };
+        }
         const text = await res.text();
         console.error("Login failed. Server returned non-JSON:", text);
-        return { success: false, message: `Server Error (${res.status}): API not found or server error.` };
+        return { success: false, message: `Server Error (${res.status}): Please check server logs.` };
       }
 
       const data = await res.json();
