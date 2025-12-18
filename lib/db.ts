@@ -73,7 +73,7 @@ export async function getAllTemplates(activeOnly = true) {
 export async function createTemplate(t: Omit<DBTemplate, 'id' | 'createdAt' | 'created_at' | 'updated_at'>) {
   const { rows } = await sql`
     INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
-    VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags}, ${t.is_active})
+    VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.is_active})
     RETURNING *
   `;
   return rows[0];
@@ -87,7 +87,7 @@ export async function updateTemplate(id: string, t: Partial<DBTemplate>) {
         image_url = COALESCE(${t.imageUrl}, image_url),
         code = COALESCE(${t.code}, code),
         language = COALESCE(${t.language}, language),
-        tags = COALESCE(${t.tags}, tags),
+        tags = COALESCE(${t.tags as any}, tags),
         is_active = COALESCE(${t.is_active}, is_active),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
