@@ -84,20 +84,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setLogs(data);
   };
 
+  const processFile = (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      alert(t.fileLimit);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setImagePreview(base64String);
+      setNewTemplate(prev => ({ ...prev, imageUrl: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert(t.fileLimit);
-        return;
+      processFile(file);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          processFile(file);
+          // 如果找到了图片并处理，通常可以停止循环
+          break;
+        }
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        setNewTemplate({ ...newTemplate, imageUrl: base64String });
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -297,7 +317,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     <h4 className="text-md font-bold text-slate-700">{newTemplate.id ? t.editTemplateTitle : t.uploadNewTitle}</h4>
                     <button onClick={() => setShowTemplateForm(false)} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
                  </div>
-                 <form onSubmit={handleTemplateSubmit} className="space-y-5">
+                 <form onSubmit={handleTemplateSubmit} onPaste={handlePaste} className="space-y-5">
                     <div className="space-y-4">
                       <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
                       <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
@@ -321,14 +341,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             {imagePreview ? (
                               <div className="flex flex-col items-center gap-2 py-4">
                                 <img src={imagePreview} className="h-24 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
-                                <span className="text-xs text-indigo-600 font-medium">点击更换图片</span>
+                                <span className="text-xs text-indigo-600 font-medium">点击更换图片 (支持粘贴)</span>
                               </div>
                             ) : (
                               <>
                                 <Upload className="text-slate-400" size={24} />
                                 <div className="text-center">
                                   <p className="text-sm font-medium text-slate-600">{t.uploadFile}</p>
-                                  <p className="text-[10px] text-slate-400">{t.fileLimit}</p>
+                                  <p className="text-[10px] text-slate-400">{t.fileLimit} (支持直接粘贴图片)</p>
                                 </div>
                               </>
                             )}
