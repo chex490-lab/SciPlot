@@ -55,8 +55,8 @@ export async function initDatabase() {
   await sql`
     CREATE TABLE IF NOT EXISTS usage_logs (
       id SERIAL PRIMARY KEY,
-      code_id INTEGER REFERENCES member_codes(id),
-      template_id UUID REFERENCES templates(id),
+      code_id INTEGER REFERENCES member_codes(id) ON DELETE CASCADE,
+      template_id UUID REFERENCES templates(id) ON DELETE CASCADE,
       user_ip VARCHAR(50),
       action_type VARCHAR(50),
       success BOOLEAN,
@@ -116,10 +116,13 @@ export async function updateTemplate(id: string, t: any) {
 
 export async function deleteTemplate(id: string) {
   if (!UUID_REGEX.test(id)) return;
+  // 先删除关联的日志，避免外键约束报错
+  await sql`DELETE FROM usage_logs WHERE template_id = ${id}`;
+  // 再删除模板本身
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
-// ... remaining code ...
+// Member Codes
 export async function getAllMemberCodes() {
   const { rows } = await sql`SELECT * FROM member_codes ORDER BY created_at DESC`;
   return rows;
