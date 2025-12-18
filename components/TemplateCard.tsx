@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Template } from '../types';
 import { Trash2 } from 'lucide-react';
@@ -20,6 +21,9 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
     }
   };
 
+  // Ensure tags is always an array
+  const tags = Array.isArray(template.tags) ? template.tags : [];
+
   return (
     <div 
       className="group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all cursor-pointer flex flex-col h-full relative"
@@ -27,21 +31,24 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <img 
-          src={template.imageUrl} 
+          src={template.imageUrl || 'https://picsum.photos/seed/plot/800/600'} 
           alt={template.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/800/600';
+          }}
         />
         <div className="absolute top-2 right-2 flex gap-2">
           <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full uppercase font-semibold">
-            {template.language}
+            {template.language || 'Code'}
           </div>
         </div>
       </div>
       
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-            {template.title}
+          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+            {template.title || 'Untitled Template'}
           </h3>
           {isAdmin && onDelete && (
             <button 
@@ -55,15 +62,17 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
         </div>
         
         <p className="text-slate-500 text-sm line-clamp-2 mb-4 flex-grow">
-          {template.description}
+          {template.description || 'No description provided.'}
         </p>
         
         <div className="flex flex-wrap gap-2 mt-auto">
-          {template.tags.map(tag => (
+          {tags.length > 0 ? tags.map(tag => (
             <span key={tag} className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
               #{tag}
             </span>
-          ))}
+          )) : (
+            <span className="text-xs text-slate-300 italic">No tags</span>
+          )}
         </div>
       </div>
     </div>

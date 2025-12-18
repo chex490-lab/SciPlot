@@ -1,3 +1,4 @@
+
 import { getAllTemplates, createTemplate, updateTemplate, deleteTemplate } from '../lib/db';
 import { isAuthenticated } from '../lib/auth';
 import { INITIAL_TEMPLATES } from '../constants';
@@ -16,23 +17,35 @@ export default async function handler(req: Request) {
       const isAdmin = await isAuthenticated(req);
       // If admin, show all (including inactive), else show only active
       const templates = await getAllTemplates(!isAdmin);
+      
+      // If DB is empty, return initial templates for display
+      if (!templates || templates.length === 0) {
+        return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+
       // Transform DB fields to frontend format
       const formatted = templates.map((t: any) => ({
         id: t.id,
-        title: t.title,
-        description: t.description,
-        imageUrl: t.image_url,
-        code: t.code,
-        language: t.language,
-        tags: t.tags || [],
+        title: t.title || 'Untitled',
+        description: t.description || '',
+        imageUrl: t.image_url || 'https://picsum.photos/seed/plot/800/600',
+        code: t.code || '',
+        language: t.language || 'python',
+        tags: Array.isArray(t.tags) ? t.tags : [],
         isActive: t.is_active,
-        createdAt: new Date(t.created_at).getTime()
+        createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
       }));
-      return new Response(JSON.stringify(formatted), { headers: { 'Content-Type': 'application/json' } });
+      
+      return new Response(JSON.stringify(formatted), { 
+        headers: { 'Content-Type': 'application/json' } 
+      });
     } catch (e) {
       console.error("Database error, returning mock templates:", e);
-      // Fallback to initial templates if database connection fails
-      return new Response(JSON.stringify(INITIAL_TEMPLATES), { headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
+        headers: { 'Content-Type': 'application/json' } 
+      });
     }
   }
 
