@@ -82,7 +82,10 @@ const translations = {
     dbError: "数据库未连接或表不存在",
     expiration: "到期时间",
     permanent: "永久有效",
-    expired: "已过期"
+    expired: "已过期",
+    // Contact feature
+    contactAdmin: "有问题及时联系管理员",
+    emailCopied: "邮箱已复制，请及时联系管理员"
   }
 };
 

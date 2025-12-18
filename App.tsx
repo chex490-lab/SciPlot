@@ -7,7 +7,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { MemberCodeModal } from './components/MemberCodeModal';
 import { Button } from './components/Button';
-import { Search, Plus, LayoutGrid, Beaker, UserCog, LogOut, Loader2, Inbox } from 'lucide-react';
+import { Search, Plus, LayoutGrid, Beaker, UserCog, LogOut, Loader2, Inbox, Mail, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 import { api } from './src/services/api';
 
@@ -20,6 +20,7 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showEmailToast, setShowEmailToast] = useState(false);
   
   const { t } = useLanguage();
 
@@ -81,8 +82,27 @@ export default function App() {
     setSelectedTemplate(t);
   };
 
+  const handleContactAdmin = async () => {
+    const email = 'chex490@gmail.com';
+    try {
+      await navigator.clipboard.writeText(email);
+      setShowEmailToast(true);
+      setTimeout(() => setShowEmailToast(false), 3000);
+    } catch (err) {
+      alert('复制失败，请手动联系：' + email);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-slate-50">
+    <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-slate-50 relative">
+      {/* Email Toast Notification */}
+      {showEmailToast && (
+        <div className="fixed top-20 right-4 z-[100] bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-right-10 duration-300">
+          <CheckCircle2 size={18} />
+          <span className="text-sm font-medium">{t.emailCopied}</span>
+        </div>
+      )}
+
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -107,7 +127,17 @@ export default function App() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Contact Admin Link */}
+            <button 
+              onClick={handleContactAdmin}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100"
+              title="chex490@gmail.com"
+            >
+              <Mail size={16} />
+              <span className="whitespace-nowrap">{t.contactAdmin}</span>
+            </button>
+
             {isAdmin ? (
                <div className="flex gap-2">
                  <Button onClick={() => setShowAdminPanel(true)} size="sm" className="whitespace-nowrap">
