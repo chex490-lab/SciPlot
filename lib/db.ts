@@ -155,7 +155,7 @@ export async function verifyMemberCode(code: string) {
   const { rows } = await sql`SELECT * FROM member_codes WHERE code = ${code}`;
   const memberCode = rows[0];
 
-  if (!memberCode) throw new Error("Invalid code");
+  if (!memberCode) throw new Error("Invalid code/请联系管理员chex490@gmail.com");
   if (!memberCode.is_active) throw new Error("Code is inactive");
   if (memberCode.expires_at && new Date(memberCode.expires_at) < new Date()) throw new Error("Code expired");
   if (memberCode.max_uses > 0 && memberCode.used_count >= memberCode.max_uses) throw new Error("Max uses reached");
