@@ -15,11 +15,13 @@ export default async function handler(req: Request) {
   // GET Public Templates
   if (req.method === 'GET') {
     try {
-      const isAdmin = await isAuthenticated(req);
-      // If admin, show all (including inactive), else show only active
+      // Check if user is admin via token
+      const isAdmin = !!(await isAuthenticated(req));
+      
+      // If admin, show everything. If not, show only active ones.
       const dbTemplates = await getAllTemplates(!isAdmin);
       
-      // Transform DB fields (snake_case) to frontend format (camelCase)
+      // Map DB snake_case fields back to frontend camelCase
       const formattedDb: Template[] = dbTemplates.map((t: any) => ({
         id: t.id,
         title: t.title || 'Untitled',
@@ -28,24 +30,31 @@ export default async function handler(req: Request) {
         code: t.code || '',
         language: (t.language as any) || 'python',
         tags: Array.isArray(t.tags) ? t.tags : [],
-        isActive: t.is_active,
+        isActive: t.is_active === true || t.is_active === 't',
         createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
       }));
 
-      // Merge results: user creations first, then initial templates
-      const finalTemplates = [...formattedDb];
+      // Combine DB templates (newest first) with default initial templates
+      // We always return DB templates first.
+      let finalTemplates = [...formattedDb];
       
-      // Always include initial templates for non-admins to ensure content,
-      // or only if DB is thin.
-      if (formattedDb.length < 10) {
-        finalTemplates.push(...INITIAL_TEMPLATES);
+      // If DB doesn't have many items, supplement with INITIAL_TEMPLATES
+      // We filter out any potential ID collisions although DB uses UUIDs
+      if (finalTemplates.length < 20) {
+        const initialToAdd = INITIAL_TEMPLATES.filter(
+          init => !finalTemplates.some(db => db.title === init.title)
+        );
+        finalTemplates = [...finalTemplates, ...initialToAdd];
       }
       
       return new Response(JSON.stringify(finalTemplates), { 
-        headers: { 'Content-Type': 'application/json' } 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, max-age=0'
+        } 
       });
     } catch (e) {
-      console.error("Database error, returning mock templates:", e);
+      console.error("Database fetch error, falling back to initials:", e);
       return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
         headers: { 'Content-Type': 'application/json' } 
       });
@@ -60,16 +69,18 @@ export default async function handler(req: Request) {
 
     if (req.method === 'POST') {
       const body = await req.json();
-      
-      // Map frontend camelCase to DB snake_case for saving
+      if (!body.title || !body.code) {
+        return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
+      }
+
       const dbData = {
         title: body.title,
-        description: body.description,
-        image_url: body.imageUrl,
+        description: body.description || '',
+        image_url: body.imageUrl || '',
         code: body.code,
         language: body.language || 'python',
         tags: Array.isArray(body.tags) ? body.tags : [],
-        is_active: true // Force active on creation so users can see it
+        is_active: true // Always active by default for new creations
       };
 
       const result = await createTemplate(dbData);
@@ -78,9 +89,8 @@ export default async function handler(req: Request) {
 
     if (req.method === 'PUT') {
       const body = await req.json();
-      if (!body.id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      if (!body.id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400 });
       
-      // Map update fields correctly
       const updateData: any = { ...body };
       if (body.imageUrl) {
         updateData.image_url = body.imageUrl;
@@ -96,13 +106,13 @@ export default async function handler(req: Request) {
     }
 
     if (req.method === 'DELETE') {
-      if (!id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      if (!id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400 });
       await deleteTemplate(id);
       return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
     }
   } catch (e: any) {
     console.error("Admin API Error:", e);
-    return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), { status: 500 });
   }
 
   return new Response('Method Not Allowed', { status: 405 });

@@ -64,7 +64,8 @@ export async function initDatabase() {
 // Templates
 export async function getAllTemplates(activeOnly = true) {
   if (activeOnly) {
-    const { rows } = await sql`SELECT * FROM templates WHERE is_active = true ORDER BY created_at DESC`;
+    // Explicitly check is_active is true
+    const { rows } = await sql`SELECT * FROM templates WHERE is_active = true OR is_active IS NULL ORDER BY created_at DESC`;
     return rows;
   }
   const { rows } = await sql`SELECT * FROM templates ORDER BY created_at DESC`;
@@ -72,7 +73,6 @@ export async function getAllTemplates(activeOnly = true) {
 }
 
 export async function createTemplate(t: any) {
-  // Use the exact field names as defined in the SQL table
   const { rows } = await sql`
     INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
     VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags}, ${t.is_active})
