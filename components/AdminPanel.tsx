@@ -4,7 +4,7 @@ import { Template, MemberCode, UsageLog } from '../types';
 import { Button } from './Button';
 import { api } from '../src/services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -112,16 +112,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setIsSubmittingTemplate(true);
     try {
       const tags = typeof newTemplate.tags === 'string' ? (newTemplate.tags as string).split(',').map((s: string) => s.trim()) : newTemplate.tags;
-      await api.createTemplate({ ...newTemplate, tags });
+      
+      if (newTemplate.id) {
+        // Update existing
+        await api.updateTemplate({ ...newTemplate, tags });
+      } else {
+        // Create new
+        await api.createTemplate({ ...newTemplate, tags });
+      }
+      
       setShowTemplateForm(false);
       setNewTemplate({ language: 'python', tags: [] });
       setImagePreview(null);
       await fetchTemplates();
     } catch (err: any) {
-      alert(err.message || "Failed to create template");
+      alert(err.message || "Failed to save template");
     } finally {
       setIsSubmittingTemplate(false);
     }
+  };
+
+  const handleEditTemplate = (template: Template) => {
+    setNewTemplate({
+      id: template.id,
+      title: template.title,
+      description: template.description,
+      code: template.code,
+      language: template.language || 'python',
+      tags: Array.isArray(template.tags) ? template.tags : [],
+      imageUrl: template.imageUrl
+    });
+    setImagePreview(template.imageUrl);
+    setShowTemplateForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddNewClick = () => {
+    setNewTemplate({ language: 'python', tags: [] });
+    setImagePreview(null);
+    setShowTemplateForm(true);
   };
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
@@ -225,14 +254,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
              <div className="flex justify-between items-center">
                <h3 className="text-lg font-bold text-slate-800">{t.mgmtTitle}</h3>
                {!showTemplateForm && (
-                 <Button onClick={() => setShowTemplateForm(true)} size="sm">
+                 <Button onClick={handleAddNewClick} size="sm">
                    <Plus size={16} className="mr-2"/> {t.newTemplate}
                  </Button>
                )}
              </div>
              
              {showTemplateForm && (
-               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-top-2 duration-200">
+               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-top-2 duration-200 mb-6">
+                 <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-md font-bold text-slate-700">{newTemplate.id ? t.editTemplateTitle : t.uploadNewTitle}</h4>
+                    <button onClick={() => setShowTemplateForm(false)} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
+                 </div>
                  <form onSubmit={handleTemplateSubmit} className="space-y-5">
                     <div className="space-y-4">
                       <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
@@ -282,7 +315,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       </div>
 
                       <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
-                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (e.g. Python, Plotly, 3D)"} value={newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (e.g. Python, Plotly, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-2">
@@ -305,15 +338,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                   <tbody>
                     {templates.length > 0 ? templates.map(tmp => (
                       <tr key={tmp.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td className="p-4 font-medium text-slate-700">{tmp.title}</td>
+                        <td className="p-4 font-medium text-slate-700">
+                          <div className="flex items-center gap-3">
+                            <img src={tmp.imageUrl} className="w-10 h-10 object-cover rounded border border-slate-100" />
+                            {tmp.title}
+                          </div>
+                        </td>
                         <td className="p-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tmp.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {tmp.isActive ? t.active : t.inactive}
                           </span>
                         </td>
-                        <td className="p-4 flex gap-3">
-                           <button onClick={() => toggleTemplateActive(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Toggle Status"><RotateCw size={16}/></button>
-                           <button onClick={() => handleDeleteTemplate(tmp.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16}/></button>
+                        <td className="p-4">
+                           <div className="flex gap-2">
+                             <button onClick={() => handleEditTemplate(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t.edit}><Pencil size={16}/></button>
+                             <button onClick={() => toggleTemplateActive(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Toggle Status"><RotateCw size={16}/></button>
+                             <button onClick={() => handleDeleteTemplate(tmp.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16}/></button>
+                           </div>
                         </td>
                       </tr>
                     )) : (

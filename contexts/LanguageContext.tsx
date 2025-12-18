@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 export type Language = 'en' | 'zh';
@@ -22,6 +23,7 @@ const translations = {
     logout: "Logout",
     wrongPassword: "Incorrect password",
     uploadNewTitle: "Upload New Template",
+    editTemplateTitle: "Edit Template",
     uploadNewDesc: "Share your scientific plotting code with the community.",
     cancel: "Cancel",
     templateTitle: "Template Title",
@@ -70,7 +72,8 @@ const translations = {
     remove: "Remove",
     codeHidden: "Source code is hidden.",
     codeHiddenDesc: "Use the 'I want this style' button to get the code.",
-    enlargePreview: "Enlarge Preview"
+    enlargePreview: "Enlarge Preview",
+    edit: "Edit"
   },
   zh: {
     appTitle: "SciPlot Hub",
@@ -91,6 +94,7 @@ const translations = {
     logout: "退出登录",
     wrongPassword: "密码错误",
     uploadNewTitle: "上传新模板",
+    editTemplateTitle: "编辑模板",
     uploadNewDesc: "与社区分享您的科研绘图代码。",
     cancel: "取消",
     templateTitle: "模板标题",
@@ -139,7 +143,8 @@ const translations = {
     remove: "移除",
     codeHidden: "源代码已隐藏。",
     codeHiddenDesc: "点击“想要同款”按钮获取代码。",
-    enlargePreview: "放大预览"
+    enlargePreview: "放大预览",
+    edit: "编辑"
   }
 };
 
