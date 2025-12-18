@@ -26,28 +26,25 @@ export default async function handler(req: Request) {
         code: t.code || '',
         language: (t.language as any) || 'python',
         tags: Array.isArray(t.tags) ? t.tags : [],
-        isActive: t.is_active === true || t.is_active === 't',
+        // Robust boolean parsing for Postgres (handles 't', 'f', true, false, null)
+        isActive: t.is_active === true || t.is_active === 't' || t.is_active === null,
         createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
       }));
 
-      // If database has been initialized, formattedDb will contain at least seeded templates
-      // If formattedDb is empty, it means DB is not initialized or truly empty
-      if (formattedDb.length === 0) {
-        return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
-          headers: { 'Content-Type': 'application/json' } 
-        });
-      }
-      
       return new Response(JSON.stringify(formattedDb), { 
         headers: { 
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, max-age=0'
         } 
       });
-    } catch (e) {
-      return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
-        headers: { 'Content-Type': 'application/json' } 
-      });
+    } catch (e: any) {
+      // Only fallback to INITIAL_TEMPLATES if the DB table doesn't exist (not initialized)
+      if (e.message?.includes('relation "templates" does not exist')) {
+        return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+      return new Response(JSON.stringify({ error: e.message }), { status: 500 });
     }
   }
 
@@ -86,6 +83,7 @@ export default async function handler(req: Request) {
         updateData.image_url = body.imageUrl;
         delete updateData.imageUrl;
       }
+      // Explicitly map isActive to is_active
       if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
         updateData.is_active = body.isActive;
         delete updateData.isActive;

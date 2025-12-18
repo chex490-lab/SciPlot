@@ -69,7 +69,6 @@ export async function initDatabase() {
   const { rowCount } = await sql`SELECT id FROM templates LIMIT 1`;
   if (rowCount === 0) {
     for (const t of INITIAL_TEMPLATES) {
-      // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
       await sql`
         INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
         VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, true)
@@ -81,7 +80,8 @@ export async function initDatabase() {
 // Templates
 export async function getAllTemplates(activeOnly = true) {
   if (activeOnly) {
-    const { rows } = await sql`SELECT * FROM templates WHERE is_active = true ORDER BY created_at DESC`;
+    // Treat NULL as active for older rows
+    const { rows } = await sql`SELECT * FROM templates WHERE is_active IS NOT FALSE ORDER BY created_at DESC`;
     return rows;
   }
   const { rows } = await sql`SELECT * FROM templates ORDER BY created_at DESC`;
@@ -89,7 +89,6 @@ export async function getAllTemplates(activeOnly = true) {
 }
 
 export async function createTemplate(t: any) {
-  // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
   const { rows } = await sql`
     INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
     VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.is_active})
@@ -101,7 +100,6 @@ export async function createTemplate(t: any) {
 export async function updateTemplate(id: string, t: any) {
   if (!UUID_REGEX.test(id)) return;
 
-  // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
   await sql`
     UPDATE templates 
     SET title = COALESCE(${t.title}, title),
@@ -121,7 +119,7 @@ export async function deleteTemplate(id: string) {
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
-// Member Codes
+// ... remaining code ...
 export async function getAllMemberCodes() {
   const { rows } = await sql`SELECT * FROM member_codes ORDER BY created_at DESC`;
   return rows;

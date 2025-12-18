@@ -51,26 +51,24 @@ export const api = {
     try {
         const res = await fetch('/api/templates', { 
           headers: getHeaders(),
-          cache: 'no-store' // Critical: ensure we always get fresh data
+          cache: 'no-store'
         });
         
-        if (res.status === 404) return INITIAL_TEMPLATES;
-
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("text/html")) return INITIAL_TEMPLATES;
-
+        // If API explicitly fails with 500 or 404, we might consider fallback
         if (!res.ok) {
-            try {
-               return await handleResponse(res);
-            } catch (e) {
-               return INITIAL_TEMPLATES;
-            }
+           const data = await res.json();
+           // If DB not initialized, formatted error contains it
+           if (data.error?.includes('relation "templates" does not exist')) {
+              return INITIAL_TEMPLATES;
+           }
+           return []; // Return empty instead of hardcoded if it's a real DB error but initialized
         }
         
-        const data = await handleResponse(res);
-        return Array.isArray(data) ? data : INITIAL_TEMPLATES;
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
 
     } catch (e) {
+        console.warn("API GetTemplates Error:", e);
         return INITIAL_TEMPLATES;
     }
   },
