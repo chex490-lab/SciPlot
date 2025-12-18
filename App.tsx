@@ -89,7 +89,15 @@ export default function App() {
       setShowEmailToast(true);
       setTimeout(() => setShowEmailToast(false), 3000);
     } catch (err) {
-      alert('复制失败，请手动联系：' + email);
+      // Fallback for some mobile browsers that might block clipboard API without user gesture context
+      const tempInput = document.createElement('input');
+      tempInput.value = email;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      setShowEmailToast(true);
+      setTimeout(() => setShowEmailToast(false), 3000);
     }
   };
 
@@ -104,52 +112,53 @@ export default function App() {
       )}
 
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <Beaker size={20} strokeWidth={2.5} />
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-indigo-600 p-1.5 sm:p-2 rounded-lg text-white">
+              <Beaker size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} />
             </div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 hidden sm:block">
+            <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 hidden sm:block">
               {t.appTitle}
             </h1>
           </div>
 
-          <div className="flex-1 max-w-md relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Search size={18} />
+          <div className="flex-1 max-w-md relative min-w-0">
+            <div className="absolute inset-y-0 left-0 pl-2 sm:pl-3 flex items-center pointer-events-none text-slate-400">
+              <Search size={16} className="sm:w-[18px] sm:h-[18px]" />
             </div>
             <input
               type="text"
               placeholder={t.searchPlaceholder}
-              className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all sm:text-sm"
+              className="block w-full pl-8 sm:pl-10 pr-3 py-1.5 sm:py-2 border border-slate-300 rounded-lg bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Contact Admin Link */}
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 shrink-0">
+            {/* Contact Admin Link - Now visible on mobile */}
             <button 
               onClick={handleContactAdmin}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100"
+              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 text-sm font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-transparent hover:border-indigo-100 shrink-0"
               title="chex490@gmail.com"
             >
-              <Mail size={16} />
-              <span className="whitespace-nowrap">{t.contactAdmin}</span>
+              <Mail size={18} className="sm:w-4 sm:h-4" />
+              <span className="whitespace-nowrap hidden lg:inline">{t.contactAdmin}</span>
+              <span className="whitespace-nowrap hidden sm:inline lg:hidden">联系管理员</span>
             </button>
 
             {isAdmin ? (
-               <div className="flex gap-2">
-                 <Button onClick={() => setShowAdminPanel(true)} size="sm" className="whitespace-nowrap">
-                  <UserCog size={16} className="mr-1.5" />
-                  {t.dashboard}
+               <div className="flex gap-1 sm:gap-2">
+                 <Button onClick={() => setShowAdminPanel(true)} size="sm" className="whitespace-nowrap px-2 sm:px-4">
+                  <UserCog size={16} className="sm:mr-1.5" />
+                  <span className="hidden sm:inline">{t.dashboard}</span>
                 </Button>
-                <Button onClick={handleLogout} variant="secondary" size="sm">
+                <Button onClick={handleLogout} variant="secondary" size="sm" className="px-2">
                   <LogOut size={16} />
                 </Button>
                </div>
             ) : (
-                <Button onClick={() => setShowLoginModal(true)} variant="ghost" size="sm" className="text-slate-600">
+                <Button onClick={() => setShowLoginModal(true)} variant="ghost" size="sm" className="text-slate-600 px-2">
                   <UserCog size={18} />
                 </Button>
             )}
