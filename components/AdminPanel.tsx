@@ -204,8 +204,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     try {
       await api.updateTemplate({ id: t_item.id, isActive: !t_item.isActive });
       await fetchTemplates();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert("Failed to update status: " + err.message);
     }
   };
 
@@ -213,8 +213,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     try {
       await api.updateMemberCode({ id: c.id, is_active: !c.is_active });
       await fetchCodes();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert("Failed to update status: " + err.message);
     }
   };
 
@@ -223,8 +223,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     try {
       await api.deleteTemplate(id);
       await fetchTemplates();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert("Failed to delete template: " + (err.message || "Unknown error"));
     }
   };
 

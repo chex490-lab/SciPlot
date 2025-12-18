@@ -159,9 +159,12 @@ export default function App() {
                     isAdmin={isAdmin}
                     onClick={handleTemplateClick}
                     onDelete={async (id) => {
-                       if(confirm('Delete?')) {
+                       // redundant confirm removed as TemplateCard handles it
+                       try {
                           await api.deleteTemplate(id);
                           loadTemplates();
+                       } catch (err: any) {
+                          alert("Delete failed: " + (err.message || "Unknown error"));
                        }
                     }}
                   />

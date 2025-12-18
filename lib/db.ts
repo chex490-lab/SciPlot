@@ -18,6 +18,9 @@ export interface MemberCode {
   created_at: string;
 }
 
+// Simple UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function initDatabase() {
   await sql`
     CREATE TABLE IF NOT EXISTS templates (
@@ -64,7 +67,6 @@ export async function initDatabase() {
 // Templates
 export async function getAllTemplates(activeOnly = true) {
   if (activeOnly) {
-    // Explicitly check is_active is true
     const { rows } = await sql`SELECT * FROM templates WHERE is_active = true OR is_active IS NULL ORDER BY created_at DESC`;
     return rows;
   }
@@ -82,6 +84,9 @@ export async function createTemplate(t: any) {
 }
 
 export async function updateTemplate(id: string, t: any) {
+  // Only update if it's a valid UUID
+  if (!UUID_REGEX.test(id)) return;
+
   await sql`
     UPDATE templates 
     SET title = COALESCE(${t.title}, title),
@@ -97,6 +102,12 @@ export async function updateTemplate(id: string, t: any) {
 }
 
 export async function deleteTemplate(id: string) {
+  // If it's not a valid UUID (like hardcoded IDs '1', '2'), we just return
+  // as they don't exist in the database and would cause a Postgres error.
+  if (!UUID_REGEX.test(id)) {
+    console.warn(`Attempted to delete non-DB template with ID: ${id}`);
+    return;
+  }
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
@@ -149,6 +160,8 @@ export async function incrementCodeUsage(id: number) {
 }
 
 export async function logUsage(codeId: number, templateId: string, ip: string, success: boolean, msg?: string) {
+  if (!UUID_REGEX.test(templateId)) return; // Don't log for non-DB templates
+  
   await sql`
     INSERT INTO usage_logs (code_id, template_id, user_ip, success, error_msg, action_type)
     VALUES (${codeId}, ${templateId}, ${ip}, ${success}, ${msg}, 'verify')
