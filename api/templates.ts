@@ -2,6 +2,7 @@
 import { getAllTemplates, createTemplate, updateTemplate, deleteTemplate } from '../lib/db';
 import { isAuthenticated } from '../lib/auth';
 import { INITIAL_TEMPLATES } from '../constants';
+import { Template } from '../types';
 
 export const config = {
   runtime: 'edge',
@@ -19,24 +20,24 @@ export default async function handler(req: Request) {
       const dbTemplates = await getAllTemplates(!isAdmin);
       
       // Transform DB fields (snake_case) to frontend format (camelCase)
-      const formattedDb = dbTemplates.map((t: any) => ({
+      const formattedDb: Template[] = dbTemplates.map((t: any) => ({
         id: t.id,
         title: t.title || 'Untitled',
         description: t.description || '',
         imageUrl: t.image_url || 'https://picsum.photos/seed/plot/800/600',
         code: t.code || '',
-        language: t.language || 'python',
+        language: (t.language as any) || 'python',
         tags: Array.isArray(t.tags) ? t.tags : [],
         isActive: t.is_active,
         createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
       }));
 
-      // If we are not admin, and we have DB templates, merge them with INITIAL_TEMPLATES
-      // so the site doesn't look empty, but user creations come first.
+      // Merge results: user creations first, then initial templates
       const finalTemplates = [...formattedDb];
       
-      // Only add initial templates if DB is relatively empty or to supplement
-      if (formattedDb.length === 0) {
+      // Always include initial templates for non-admins to ensure content,
+      // or only if DB is thin.
+      if (formattedDb.length < 10) {
         finalTemplates.push(...INITIAL_TEMPLATES);
       }
       
@@ -60,18 +61,18 @@ export default async function handler(req: Request) {
     if (req.method === 'POST') {
       const body = await req.json();
       
-      // CRITICAL: Map frontend camelCase to DB snake_case
+      // Map frontend camelCase to DB snake_case for saving
       const dbData = {
         title: body.title,
         description: body.description,
-        image_url: body.imageUrl, // Map here
+        image_url: body.imageUrl,
         code: body.code,
         language: body.language || 'python',
-        tags: body.tags || [],
-        is_active: true // Force active on creation
+        tags: Array.isArray(body.tags) ? body.tags : [],
+        is_active: true // Force active on creation so users can see it
       };
 
-      const result = await createTemplate(dbData as any);
+      const result = await createTemplate(dbData);
       return new Response(JSON.stringify({ success: true, data: result }), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -85,7 +86,7 @@ export default async function handler(req: Request) {
         updateData.image_url = body.imageUrl;
         delete updateData.imageUrl;
       }
-      if (body.hasOwnProperty('isActive')) {
+      if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
         updateData.is_active = body.isActive;
         delete updateData.isActive;
       }

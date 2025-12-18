@@ -1,3 +1,4 @@
+
 import { sql } from '@vercel/postgres';
 import { Template } from '../types';
 
@@ -70,24 +71,25 @@ export async function getAllTemplates(activeOnly = true) {
   return rows;
 }
 
-export async function createTemplate(t: Omit<DBTemplate, 'id' | 'createdAt' | 'created_at' | 'updated_at'>) {
+export async function createTemplate(t: any) {
+  // Use the exact field names as defined in the SQL table
   const { rows } = await sql`
     INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
-    VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.is_active})
+    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags}, ${t.is_active})
     RETURNING *
   `;
   return rows[0];
 }
 
-export async function updateTemplate(id: string, t: Partial<DBTemplate>) {
+export async function updateTemplate(id: string, t: any) {
   await sql`
     UPDATE templates 
     SET title = COALESCE(${t.title}, title),
         description = COALESCE(${t.description}, description),
-        image_url = COALESCE(${t.imageUrl}, image_url),
+        image_url = COALESCE(${t.image_url}, image_url),
         code = COALESCE(${t.code}, code),
         language = COALESCE(${t.language}, language),
-        tags = COALESCE(${t.tags as any}, tags),
+        tags = COALESCE(${t.tags}, tags),
         is_active = COALESCE(${t.is_active}, is_active),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
@@ -105,7 +107,6 @@ export async function getAllMemberCodes() {
 }
 
 export async function createMemberCode(name: string, maxUses: number, expiresAt: string | null) {
-  // Generate random 8-char code
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for(let i=0; i<4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
