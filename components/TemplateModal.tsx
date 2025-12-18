@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Template } from '../types';
 import { X, Copy, Check, ZoomIn, Lock } from 'lucide-react';
@@ -27,9 +28,40 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
 
   const handleCopy = async () => {
     if (canViewCode) {
-        await navigator.clipboard.writeText(template.code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        try {
+          // 优先使用现代 Clipboard API
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(template.code);
+            setCopied(true);
+          } else {
+            throw new Error('Clipboard API unavailable');
+          }
+        } catch (err) {
+          // 针对手机端部分浏览器的回退方案
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = template.code;
+            // 确保 textarea 在屏幕外不可见但可操作
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+              setCopied(true);
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback copy failed', fallbackErr);
+            alert('复制失败，请尝试长按代码手动复制');
+          }
+        }
+        
+        if (copied || true) { // 只要触发了成功逻辑就显示已复制
+          setTimeout(() => setCopied(false), 2000);
+        }
     } else {
         onVerifyRequest?.();
     }
@@ -74,7 +106,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
               </Button>
               <Button 
                 onClick={handleCopy} 
-                className={`flex items-center gap-2 shadow-sm ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                className={`flex items-center gap-2 shadow-sm transition-all ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
               >
                 {copied ? <Check size={16} /> : (canViewCode ? <Copy size={16} /> : <Lock size={16} />)}
                 {copied ? t.copied : (canViewCode ? t.copyCode : t.copyClipboard)}
@@ -96,7 +128,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
               
               {canViewCode ? (
                 <div className="relative">
-                    <pre className="bg-slate-800 text-slate-100 p-4 rounded-lg text-xs overflow-x-auto font-mono">
+                    <pre className="bg-slate-800 text-slate-100 p-4 rounded-lg text-xs overflow-x-auto font-mono custom-scrollbar">
                         {template.code}
                     </pre>
                 </div>
