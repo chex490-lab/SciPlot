@@ -48,7 +48,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       if (activeTab === 'logs') await fetchLogs();
     } catch (err: any) {
       if (err.message?.includes('relation') || err.message?.includes('does not exist')) {
-        setDbError('Database tables not found. Please initialize the database.');
+        setDbError(t.dbError);
       } else {
         setDbError(err.message);
       }
@@ -59,11 +59,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setIsInitializing(true);
     try {
       await api.initDatabase();
-      alert('Database initialized successfully!');
+      alert('数据库初始化成功！');
       setDbError(null);
       loadData();
     } catch (err: any) {
-      alert('Initialization failed: ' + err.message);
+      alert('初始化失败: ' + err.message);
     } finally {
       setIsInitializing(false);
     }
@@ -88,7 +88,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("Image size too large. Please select a file under 2MB.");
+        alert(t.fileLimit);
         return;
       }
       const reader = new FileReader();
@@ -126,7 +126,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       setImagePreview(null);
       await fetchTemplates();
     } catch (err: any) {
-      alert(err.message || "Failed to save template");
+      alert(err.message || "保存模板失败");
     } finally {
       setIsSubmittingTemplate(false);
     }
@@ -178,7 +178,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       setNewCode({ name: '', maxUses: 0, expiresAt: '' });
       await fetchCodes();
     } catch (err: any) {
-      alert(err.message || "Failed to save member code.");
+      alert(err.message || "保存会员码失败");
     } finally {
       setIsGeneratingCode(false);
     }
@@ -205,7 +205,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       await api.updateTemplate({ id: t_item.id, isActive: !t_item.isActive });
       await fetchTemplates();
     } catch (err: any) {
-      alert("Failed to update status: " + err.message);
+      alert("更新状态失败: " + err.message);
     }
   };
 
@@ -214,7 +214,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       await api.updateMemberCode({ id: c.id, is_active: !c.is_active });
       await fetchCodes();
     } catch (err: any) {
-      alert("Failed to update status: " + err.message);
+      alert("更新状态失败: " + err.message);
     }
   };
 
@@ -224,7 +224,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       await api.deleteTemplate(id);
       await fetchTemplates();
     } catch (err: any) {
-      alert("Failed to delete template: " + (err.message || "Unknown error"));
+      alert("删除失败: " + (err.message || "未知错误"));
     }
   };
 
@@ -275,12 +275,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                className="bg-amber-600 hover:bg-amber-700 border-none shrink-0"
              >
                <Database size={16} className="mr-2" />
-               Initialize DB
+               {t.initDb}
              </Button>
            </div>
          )}
 
-         {/* Templates Tab */}
          {activeTab === 'templates' && (
            <div className="space-y-4">
              <div className="flex justify-between items-center">
@@ -322,7 +321,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             {imagePreview ? (
                               <div className="flex flex-col items-center gap-2 py-4">
                                 <img src={imagePreview} className="h-24 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
-                                <span className="text-xs text-indigo-600 font-medium">Click to change</span>
+                                <span className="text-xs text-indigo-600 font-medium">点击更换图片</span>
                               </div>
                             ) : (
                               <>
@@ -347,7 +346,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       </div>
 
                       <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
-                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (e.g. Python, Plotly, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-2">
@@ -384,13 +383,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         <td className="p-4">
                            <div className="flex gap-2">
                              <button onClick={() => handleEditTemplate(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t.edit}><Pencil size={16}/></button>
-                             <button onClick={() => toggleTemplateActive(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Toggle Status"><RotateCw size={16}/></button>
-                             <button onClick={() => handleDeleteTemplate(tmp.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16}/></button>
+                             <button onClick={() => toggleTemplateActive(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="切换状态"><RotateCw size={16}/></button>
+                             <button onClick={() => handleDeleteTemplate(tmp.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="删除"><Trash2 size={16}/></button>
                            </div>
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">No templates found</td></tr>
+                      <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">暂无模板数据</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -419,15 +418,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                  <form onSubmit={handleCodeSubmit} className="space-y-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.nameNote}</label>
-                      <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. VIP User 001" value={newCode.name} onChange={e => setNewCode({...newCode, name: e.target.value})} />
+                      <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="例如: VIP会员001" value={newCode.name} onChange={e => setNewCode({...newCode, name: e.target.value})} />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.maxUses} (0 = ∞)</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.maxUses} (0 为不限)</label>
                         <input type="number" min="0" className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newCode.maxUses} onChange={e => setNewCode({...newCode, maxUses: parseInt(e.target.value) || 0})} />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Expiration Date</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.expiration}</label>
                         <input type="date" className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newCode.expiresAt} onChange={e => setNewCode({...newCode, expiresAt: e.target.value})} />
                       </div>
                     </div>
@@ -446,7 +445,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       <th className="p-4">{t.name}</th>
                       <th className="p-4">{t.code}</th>
                       <th className="p-4">{t.usage}</th>
-                      <th className="p-4">到期时间</th>
+                      <th className="p-4">{t.expiration}</th>
                       <th className="p-4">{t.status}</th>
                       <th className="p-4">{t.actions}</th>
                     </tr>
@@ -456,13 +455,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="p-4 font-medium text-slate-700">{c.name}</td>
                         <td className="p-4"><span className="font-mono bg-indigo-50 px-2 py-1 rounded text-indigo-700 select-all border border-indigo-100">{c.code}</span></td>
-                        <td className="p-4 text-slate-600">{c.used_count} / {c.max_uses === 0 ? '∞' : c.max_uses}</td>
+                        <td className="p-4 text-slate-600">{c.used_count} / {c.max_uses === 0 ? t.unlimited : c.max_uses}</td>
                         <td className="p-4">
                            <div className="flex items-center gap-1.5 text-xs">
                              <Calendar size={12} className="text-slate-400" />
                              <span className={isExpired(c.expires_at) ? 'text-red-500 font-medium' : 'text-slate-500'}>
-                               {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '永久有效'}
-                               {isExpired(c.expires_at) && ' (已过期)'}
+                               {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : t.permanent}
+                               {isExpired(c.expires_at) && ` (${t.expired})`}
                              </span>
                            </div>
                         </td>
@@ -472,12 +471,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         <td className="p-4">
                           <div className="flex gap-2">
                             <button onClick={() => handleEditCode(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t.edit}><Pencil size={16}/></button>
-                            <button onClick={() => toggleCodeActive(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Toggle Status"><RotateCw size={16}/></button>
+                            <button onClick={() => toggleCodeActive(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="切换状态"><RotateCw size={16}/></button>
                           </div>
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={6} className="p-8 text-center text-slate-400 italic">No member codes found</td></tr>
+                      <tr><td colSpan={6} className="p-8 text-center text-slate-400 italic">暂无会员码数据</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -514,7 +513,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">No usage logs found</td></tr>
+                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">暂无日志记录</td></tr>
                     )}
                   </tbody>
                 </table>

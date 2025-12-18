@@ -7,7 +7,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { LoginModal } from './components/LoginModal';
 import { MemberCodeModal } from './components/MemberCodeModal';
 import { Button } from './components/Button';
-import { Search, Plus, LayoutGrid, Beaker, Globe, UserCog, LogOut, Loader2, Inbox } from 'lucide-react';
+import { Search, Plus, LayoutGrid, Beaker, UserCog, LogOut, Loader2, Inbox } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 import { api } from './src/services/api';
 
@@ -21,7 +21,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
 
   useEffect(() => {
     loadTemplates();
@@ -108,16 +108,11 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')} className="hidden sm:flex text-slate-600">
-              <Globe size={16} className="mr-1.5" />
-              {language === 'en' ? '中文' : 'English'}
-            </Button>
-
             {isAdmin ? (
                <div className="flex gap-2">
                  <Button onClick={() => setShowAdminPanel(true)} size="sm" className="whitespace-nowrap">
                   <UserCog size={16} className="mr-1.5" />
-                  Dashboard
+                  {t.dashboard}
                 </Button>
                 <Button onClick={handleLogout} variant="secondary" size="sm">
                   <LogOut size={16} />
@@ -159,12 +154,11 @@ export default function App() {
                     isAdmin={isAdmin}
                     onClick={handleTemplateClick}
                     onDelete={async (id) => {
-                       // redundant confirm removed as TemplateCard handles it
                        try {
                           await api.deleteTemplate(id);
                           loadTemplates();
                        } catch (err: any) {
-                          alert("Delete failed: " + (err.message || "Unknown error"));
+                          alert("删除失败: " + (err.message || "未知错误"));
                        }
                     }}
                   />
@@ -198,9 +192,9 @@ export default function App() {
         <MemberCodeModal
           templateId={verifyingTemplate.id}
           onSuccess={() => {
-            const t = verifyingTemplate;
+            const temp = verifyingTemplate;
             setVerifyingTemplate(null);
-            setSelectedTemplate({...t, showCodeOverride: true} as any);
+            setSelectedTemplate({...temp, showCodeOverride: true} as any);
           }}
           onClose={() => setVerifyingTemplate(null)}
         />
