@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Template, MemberCode, UsageLog } from '../types';
 import { Button } from './Button';
 import { api } from '../src/services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -15,6 +16,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [codes, setCodes] = useState<MemberCode[]>([]);
   const [logs, setLogs] = useState<UsageLog[]>([]);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   const { t } = useLanguage();
 
   // Form States
@@ -30,10 +33,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [newCode, setNewCode] = useState({ name: '', maxUses: 0, expiresAt: '' });
 
   useEffect(() => {
-    if (activeTab === 'templates') fetchTemplates();
-    if (activeTab === 'codes') fetchCodes();
-    if (activeTab === 'logs') fetchLogs();
+    loadData();
   }, [activeTab]);
+
+  const loadData = async () => {
+    setDbError(null);
+    try {
+      if (activeTab === 'templates') await fetchTemplates();
+      if (activeTab === 'codes') await fetchCodes();
+      if (activeTab === 'logs') await fetchLogs();
+    } catch (err: any) {
+      if (err.message?.includes('relation') || err.message?.includes('does not exist')) {
+        setDbError('Database tables not found. Please initialize the database.');
+      } else {
+        setDbError(err.message);
+      }
+    }
+  };
+
+  const handleInitDatabase = async () => {
+    setIsInitializing(true);
+    try {
+      await api.initDatabase();
+      alert('Database initialized successfully!');
+      setDbError(null);
+      loadData();
+    } catch (err: any) {
+      alert('Initialization failed: ' + err.message);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const fetchTemplates = async () => {
     const data = await api.getTemplates();
@@ -82,7 +112,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       setNewCode({ name: '', maxUses: 0, expiresAt: '' });
       await fetchCodes();
     } catch (err: any) {
-      alert(err.message || "Failed to generate member code. Ensure database is initialized.");
+      alert(err.message || "Failed to generate member code.");
     } finally {
       setIsGeneratingCode(false);
     }
@@ -144,6 +174,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
          
+         {dbError && (
+           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+             <div className="flex items-center gap-3 text-amber-800 text-sm">
+               <AlertCircle size={20} className="shrink-0" />
+               <p className="font-medium">{dbError}</p>
+             </div>
+             <Button 
+               size="sm" 
+               variant="primary" 
+               onClick={handleInitDatabase} 
+               isLoading={isInitializing}
+               className="bg-amber-600 hover:bg-amber-700 border-none shrink-0"
+             >
+               <Database size={16} className="mr-2" />
+               Initialize DB
+             </Button>
+           </div>
+         )}
+
          {/* Templates Tab */}
          {activeTab === 'templates' && (
            <div className="space-y-4">
