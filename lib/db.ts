@@ -1,6 +1,7 @@
 
 import { sql } from '@vercel/postgres';
 import { Template } from '../types';
+import { INITIAL_TEMPLATES } from '../constants';
 
 export interface DBTemplate extends Template {
   is_active: boolean;
@@ -22,6 +23,7 @@ export interface MemberCode {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function initDatabase() {
+  // 1. Create Tables
   await sql`
     CREATE TABLE IF NOT EXISTS templates (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -62,12 +64,24 @@ export async function initDatabase() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
+
+  // 2. Seed Initial Templates if table is empty
+  const { rowCount } = await sql`SELECT id FROM templates LIMIT 1`;
+  if (rowCount === 0) {
+    for (const t of INITIAL_TEMPLATES) {
+      // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
+      await sql`
+        INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
+        VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, true)
+      `;
+    }
+  }
 }
 
 // Templates
 export async function getAllTemplates(activeOnly = true) {
   if (activeOnly) {
-    const { rows } = await sql`SELECT * FROM templates WHERE is_active = true OR is_active IS NULL ORDER BY created_at DESC`;
+    const { rows } = await sql`SELECT * FROM templates WHERE is_active = true ORDER BY created_at DESC`;
     return rows;
   }
   const { rows } = await sql`SELECT * FROM templates ORDER BY created_at DESC`;
@@ -75,18 +89,19 @@ export async function getAllTemplates(activeOnly = true) {
 }
 
 export async function createTemplate(t: any) {
+  // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
   const { rows } = await sql`
     INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
-    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags}, ${t.is_active})
+    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.is_active})
     RETURNING *
   `;
   return rows[0];
 }
 
 export async function updateTemplate(id: string, t: any) {
-  // Only update if it's a valid UUID
   if (!UUID_REGEX.test(id)) return;
 
+  // Fix: Cast tags to any to satisfy @vercel/postgres Primitive type requirement for array columns
   await sql`
     UPDATE templates 
     SET title = COALESCE(${t.title}, title),
@@ -94,7 +109,7 @@ export async function updateTemplate(id: string, t: any) {
         image_url = COALESCE(${t.image_url}, image_url),
         code = COALESCE(${t.code}, code),
         language = COALESCE(${t.language}, language),
-        tags = COALESCE(${t.tags}, tags),
+        tags = COALESCE(${t.tags as any}, tags),
         is_active = COALESCE(${t.is_active}, is_active),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
@@ -102,12 +117,7 @@ export async function updateTemplate(id: string, t: any) {
 }
 
 export async function deleteTemplate(id: string) {
-  // If it's not a valid UUID (like hardcoded IDs '1', '2'), we just return
-  // as they don't exist in the database and would cause a Postgres error.
-  if (!UUID_REGEX.test(id)) {
-    console.warn(`Attempted to delete non-DB template with ID: ${id}`);
-    return;
-  }
+  if (!UUID_REGEX.test(id)) return;
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
@@ -160,7 +170,7 @@ export async function incrementCodeUsage(id: number) {
 }
 
 export async function logUsage(codeId: number, templateId: string, ip: string, success: boolean, msg?: string) {
-  if (!UUID_REGEX.test(templateId)) return; // Don't log for non-DB templates
+  if (!UUID_REGEX.test(templateId)) return;
   
   await sql`
     INSERT INTO usage_logs (code_id, template_id, user_ip, success, error_msg, action_type)

@@ -1,3 +1,4 @@
+
 import { Template } from './types';
 
 export const INITIAL_TEMPLATES: Template[] = [
@@ -8,6 +9,7 @@ export const INITIAL_TEMPLATES: Template[] = [
     imageUrl: 'https://picsum.photos/seed/plot1/800/600',
     language: 'python',
     tags: ['Time Series', 'Dual Axis', 'Matplotlib'],
+    isActive: true,
     code: `import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,6 +45,7 @@ plt.show()`,
     imageUrl: 'https://picsum.photos/seed/plot2/800/600',
     language: 'python',
     tags: ['Statistics', 'Distribution', 'Seaborn'],
+    isActive: true,
     code: `import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -65,6 +68,7 @@ plt.show()`,
     imageUrl: 'https://picsum.photos/seed/plot3/800/600',
     language: 'python',
     tags: ['3D', 'Surface', 'Matplotlib'],
+    isActive: true,
     code: `import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm

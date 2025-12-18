@@ -15,13 +15,9 @@ export default async function handler(req: Request) {
   // GET Public Templates
   if (req.method === 'GET') {
     try {
-      // Check if user is admin via token
       const isAdmin = !!(await isAuthenticated(req));
-      
-      // If admin, show everything. If not, show only active ones.
       const dbTemplates = await getAllTemplates(!isAdmin);
       
-      // Map DB snake_case fields back to frontend camelCase
       const formattedDb: Template[] = dbTemplates.map((t: any) => ({
         id: t.id,
         title: t.title || 'Untitled',
@@ -34,27 +30,21 @@ export default async function handler(req: Request) {
         createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
       }));
 
-      // Combine DB templates (newest first) with default initial templates
-      // We always return DB templates first.
-      let finalTemplates = [...formattedDb];
-      
-      // If DB doesn't have many items, supplement with INITIAL_TEMPLATES
-      // We filter out any potential ID collisions although DB uses UUIDs
-      if (finalTemplates.length < 20) {
-        const initialToAdd = INITIAL_TEMPLATES.filter(
-          init => !finalTemplates.some(db => db.title === init.title)
-        );
-        finalTemplates = [...finalTemplates, ...initialToAdd];
+      // If database has been initialized, formattedDb will contain at least seeded templates
+      // If formattedDb is empty, it means DB is not initialized or truly empty
+      if (formattedDb.length === 0) {
+        return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
+          headers: { 'Content-Type': 'application/json' } 
+        });
       }
       
-      return new Response(JSON.stringify(finalTemplates), { 
+      return new Response(JSON.stringify(formattedDb), { 
         headers: { 
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, max-age=0'
         } 
       });
     } catch (e) {
-      console.error("Database fetch error, falling back to initials:", e);
       return new Response(JSON.stringify(INITIAL_TEMPLATES), { 
         headers: { 'Content-Type': 'application/json' } 
       });
@@ -80,7 +70,7 @@ export default async function handler(req: Request) {
         code: body.code,
         language: body.language || 'python',
         tags: Array.isArray(body.tags) ? body.tags : [],
-        is_active: true // Always active by default for new creations
+        is_active: true
       };
 
       const result = await createTemplate(dbData);
@@ -111,7 +101,6 @@ export default async function handler(req: Request) {
       return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
     }
   } catch (e: any) {
-    console.error("Admin API Error:", e);
     return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), { status: 500 });
   }
 

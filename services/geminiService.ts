@@ -1,18 +1,13 @@
+
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.API_KEY || '';
-
-// Safely initialize the client only if the key exists to prevent immediate crashes in dev
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+// Always initialize with named parameter and use process.env.API_KEY directly
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getGeminiResponse = async (
   prompt: string,
   contextCode: string
 ): Promise<string> => {
-  if (!ai) {
-    throw new Error("Gemini API Key is missing.");
-  }
-
   // Basic validation to prevent empty prompts causing 500 errors
   if (!prompt || !prompt.trim()) {
     return "Please provide a valid prompt.";
@@ -36,16 +31,20 @@ If they are asking to modify the code, return ONLY the full modified code block 
 If they are asking for an explanation, provide a concise, clear explanation.
     `;
 
+    // Use gemini-3-pro-preview for complex reasoning and coding tasks
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       contents: fullPrompt,
     });
 
-    if (!response || !response.text) {
+    // Directly access the .text property from the response
+    const text = response.text;
+
+    if (!text) {
         return "I couldn't generate a response. Please try rephrasing your request.";
     }
 
-    return response.text;
+    return text;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     // Return a user-friendly error message
