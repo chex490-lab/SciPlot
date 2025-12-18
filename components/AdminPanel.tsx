@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Template, MemberCode, UsageLog } from '../types';
 import { Button } from './Button';
 import { api } from '../src/services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -19,6 +19,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [dbError, setDbError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const { t } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form States
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -27,6 +28,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     language: 'python',
     tags: []
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
@@ -80,6 +82,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setLogs(data);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image size too large. Please select a file under 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        setNewTemplate({ ...newTemplate, imageUrl: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setNewTemplate({ ...newTemplate, imageUrl: '' });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleTemplateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTemplate.title || !newTemplate.code) return;
@@ -90,6 +115,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       await api.createTemplate({ ...newTemplate, tags });
       setShowTemplateForm(false);
       setNewTemplate({ language: 'python', tags: [] });
+      setImagePreview(null);
       await fetchTemplates();
     } catch (err: any) {
       alert(err.message || "Failed to create template");
@@ -148,7 +174,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
   return (
     <div className="h-[80vh] flex flex-col">
-       <div className="flex items-center justify-between p-6 border-b border-slate-100">
+       <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
          <div className="flex gap-4">
            <button 
              onClick={() => setActiveTab('templates')}
@@ -207,15 +233,61 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
              
              {showTemplateForm && (
                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-top-2 duration-200">
-                 <form onSubmit={handleTemplateSubmit} className="space-y-4">
-                    <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
-                    <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
-                    <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
-                    <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.previewImage + " URL"} value={newTemplate.imageUrl || ''} onChange={e => setNewTemplate({...newTemplate, imageUrl: e.target.value})} />
-                    <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (e.g. Python, Plotly, 3D)"} value={newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                 <form onSubmit={handleTemplateSubmit} className="space-y-5">
+                    <div className="space-y-4">
+                      <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
+                      <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-2">
+                          <ImageIcon size={14} /> {t.previewImage}
+                        </label>
+                        <div className="flex gap-4 items-start">
+                          <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`flex-1 min-h-[120px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${imagePreview ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+                          >
+                            <input 
+                              type="file" 
+                              ref={fileInputRef} 
+                              onChange={handleFileChange} 
+                              accept="image/*" 
+                              className="hidden" 
+                            />
+                            {imagePreview ? (
+                              <div className="flex flex-col items-center gap-2 py-4">
+                                <img src={imagePreview} className="h-24 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
+                                <span className="text-xs text-indigo-600 font-medium">Click to change</span>
+                              </div>
+                            ) : (
+                              <>
+                                <Upload className="text-slate-400" size={24} />
+                                <div className="text-center">
+                                  <p className="text-sm font-medium text-slate-600">{t.uploadFile}</p>
+                                  <p className="text-[10px] text-slate-400">{t.fileLimit}</p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          {imagePreview && (
+                            <button 
+                              type="button" 
+                              onClick={clearImage}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                            >
+                              <CloseIcon size={20} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
+                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (e.g. Python, Plotly, 3D)"} value={newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                    </div>
+
                     <div className="flex justify-end gap-3 pt-2">
                       <Button type="button" variant="secondary" onClick={() => setShowTemplateForm(false)}>{t.cancel}</Button>
-                      <Button type="submit" isLoading={isSubmittingTemplate}>{t.save}</Button>
+                      <Button type="submit" isLoading={isSubmittingTemplate} disabled={!imagePreview}>{t.save}</Button>
                     </div>
                  </form>
                </div>
