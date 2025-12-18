@@ -4,7 +4,7 @@ import { Template, MemberCode, UsageLog } from '../types';
 import { Button } from './Button';
 import { api } from '../src/services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -21,7 +21,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form States
+  // Template Form States
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [isSubmittingTemplate, setIsSubmittingTemplate] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
@@ -30,8 +30,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
+  // Member Code Form States
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [editingCodeId, setEditingCodeId] = useState<number | null>(null);
   const [newCode, setNewCode] = useState({ name: '', maxUses: 0, expiresAt: '' });
 
   useEffect(() => {
@@ -114,10 +116,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       const tags = typeof newTemplate.tags === 'string' ? (newTemplate.tags as string).split(',').map((s: string) => s.trim()) : newTemplate.tags;
       
       if (newTemplate.id) {
-        // Update existing
         await api.updateTemplate({ ...newTemplate, tags });
       } else {
-        // Create new
         await api.createTemplate({ ...newTemplate, tags });
       }
       
@@ -144,10 +144,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     });
     setImagePreview(template.imageUrl);
     setShowTemplateForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleAddNewClick = () => {
+  const handleAddNewTemplateClick = () => {
     setNewTemplate({ language: 'python', tags: [] });
     setImagePreview(null);
     setShowTemplateForm(true);
@@ -158,19 +157,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setIsGeneratingCode(true);
     try {
       const expiresAtIso = newCode.expiresAt ? new Date(newCode.expiresAt).toISOString() : null;
-      await api.createMemberCode({ 
-        name: newCode.name, 
-        maxUses: Number(newCode.maxUses) || 0, 
-        expiresAt: expiresAtIso
-      });
+      
+      if (editingCodeId) {
+        await api.updateMemberCode({ 
+          id: editingCodeId,
+          name: newCode.name, 
+          max_uses: Number(newCode.maxUses) || 0, 
+          expires_at: expiresAtIso
+        });
+      } else {
+        await api.createMemberCode({ 
+          name: newCode.name, 
+          maxUses: Number(newCode.maxUses) || 0, 
+          expiresAt: expiresAtIso
+        });
+      }
+      
       setShowCodeForm(false);
+      setEditingCodeId(null);
       setNewCode({ name: '', maxUses: 0, expiresAt: '' });
       await fetchCodes();
     } catch (err: any) {
-      alert(err.message || "Failed to generate member code.");
+      alert(err.message || "Failed to save member code.");
     } finally {
       setIsGeneratingCode(false);
     }
+  };
+
+  const handleEditCode = (c: MemberCode) => {
+    setEditingCodeId(c.id);
+    setNewCode({
+      name: c.name || '',
+      maxUses: c.max_uses || 0,
+      expiresAt: c.expires_at ? new Date(c.expires_at).toISOString().split('T')[0] : ''
+    });
+    setShowCodeForm(true);
+  };
+
+  const handleAddNewCodeClick = () => {
+    setEditingCodeId(null);
+    setNewCode({ name: '', maxUses: 0, expiresAt: '' });
+    setShowCodeForm(true);
   };
 
   const toggleTemplateActive = async (t_item: Template) => {
@@ -199,6 +226,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const isExpired = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    return new Date(dateStr) < new Date();
   };
 
   return (
@@ -254,7 +286,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
              <div className="flex justify-between items-center">
                <h3 className="text-lg font-bold text-slate-800">{t.mgmtTitle}</h3>
                {!showTemplateForm && (
-                 <Button onClick={handleAddNewClick} size="sm">
+                 <Button onClick={handleAddNewTemplateClick} size="sm">
                    <Plus size={16} className="mr-2"/> {t.newTemplate}
                  </Button>
                )}
@@ -372,7 +404,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <div className="flex justify-between items-center">
                <h3 className="text-lg font-bold text-slate-800">{t.codesTab}</h3>
                {!showCodeForm && (
-                 <Button onClick={() => setShowCodeForm(true)} size="sm">
+                 <Button onClick={handleAddNewCodeClick} size="sm">
                    <Plus size={16} className="mr-2"/> {t.generateCode}
                  </Button>
                )}
@@ -380,12 +412,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
              {showCodeForm && (
                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-top-2 duration-200">
+                 <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-md font-bold text-slate-700">{editingCodeId ? t.edit + ' ' + t.code : t.generateCode}</h4>
+                    <button onClick={() => setShowCodeForm(false)} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
+                 </div>
                  <form onSubmit={handleCodeSubmit} className="space-y-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.nameNote}</label>
                       <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. VIP User 001" value={newCode.name} onChange={e => setNewCode({...newCode, name: e.target.value})} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.maxUses} (0 = ∞)</label>
                         <input type="number" min="0" className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value={newCode.maxUses} onChange={e => setNewCode({...newCode, maxUses: parseInt(e.target.value) || 0})} />
@@ -397,7 +433,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
                       <Button type="button" variant="secondary" onClick={() => setShowCodeForm(false)}>{t.cancel}</Button>
-                      <Button type="submit" isLoading={isGeneratingCode}>{t.generateCode}</Button>
+                      <Button type="submit" isLoading={isGeneratingCode}>{editingCodeId ? t.save : t.generateCode}</Button>
                     </div>
                  </form>
                </div>
@@ -410,6 +446,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       <th className="p-4">{t.name}</th>
                       <th className="p-4">{t.code}</th>
                       <th className="p-4">{t.usage}</th>
+                      <th className="p-4">到期时间</th>
                       <th className="p-4">{t.status}</th>
                       <th className="p-4">{t.actions}</th>
                     </tr>
@@ -418,17 +455,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     {codes.length > 0 ? codes.map(c => (
                       <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                         <td className="p-4 font-medium text-slate-700">{c.name}</td>
-                        <td className="p-4"><span className="font-mono bg-slate-100 px-2 py-1 rounded text-indigo-700 select-all">{c.code}</span></td>
+                        <td className="p-4"><span className="font-mono bg-indigo-50 px-2 py-1 rounded text-indigo-700 select-all border border-indigo-100">{c.code}</span></td>
                         <td className="p-4 text-slate-600">{c.used_count} / {c.max_uses === 0 ? '∞' : c.max_uses}</td>
+                        <td className="p-4">
+                           <div className="flex items-center gap-1.5 text-xs">
+                             <Calendar size={12} className="text-slate-400" />
+                             <span className={isExpired(c.expires_at) ? 'text-red-500 font-medium' : 'text-slate-500'}>
+                               {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '永久有效'}
+                               {isExpired(c.expires_at) && ' (已过期)'}
+                             </span>
+                           </div>
+                        </td>
                         <td className="p-4">
                            {c.is_active ? <CheckCircle size={18} className="text-green-500"/> : <XCircle size={18} className="text-red-500"/>}
                         </td>
                         <td className="p-4">
-                          <button onClick={() => toggleCodeActive(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><RotateCw size={16}/></button>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleEditCode(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t.edit}><Pencil size={16}/></button>
+                            <button onClick={() => toggleCodeActive(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Toggle Status"><RotateCw size={16}/></button>
+                          </div>
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">No member codes found</td></tr>
+                      <tr><td colSpan={6} className="p-8 text-center text-slate-400 italic">No member codes found</td></tr>
                     )}
                   </tbody>
                 </table>
