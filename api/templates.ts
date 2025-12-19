@@ -1,7 +1,6 @@
 
 import { getAllTemplates, createTemplate, updateTemplate, deleteTemplate } from '../lib/db';
 import { isAuthenticated } from '../lib/auth';
-import { INITIAL_TEMPLATES } from '../constants';
 import { Template } from '../types';
 
 export const config = {
@@ -46,10 +45,11 @@ export default async function handler(req: Request) {
         } 
       });
     } catch (e: any) {
-      if (e.message?.includes('relation "templates" does not exist')) {
-        return new Response(JSON.stringify(INITIAL_TEMPLATES), { headers: JSON_HEADER });
-      }
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: JSON_HEADER });
+      // We removed the INITIAL_TEMPLATES fallback here to make real errors visible
+      return new Response(JSON.stringify({ 
+        error: e.message,
+        details: "Database connection failed or tables missing. Please run 'Initialize Database' in Admin Panel." 
+      }), { status: 500, headers: JSON_HEADER });
     }
   }
 

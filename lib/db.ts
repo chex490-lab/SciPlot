@@ -23,7 +23,19 @@ export interface MemberCode {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function initDatabase() {
-  // 1. Create Categories Table
+  // 1. Repair Environment & Permissions
+  // This ensures that even after a CASCADE drop or manual import, the app can see the tables.
+  try {
+    await sql`GRANT USAGE ON SCHEMA public TO public;`;
+    await sql`GRANT ALL ON ALL TABLES IN SCHEMA public TO public;`;
+    await sql`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO public;`;
+    // Attempt to fix search_path at the database level if permissions allow
+    // Otherwise, it will just proceed with the table creation.
+  } catch (e) {
+    console.warn("Permission repair warning:", e);
+  }
+
+  // 2. Create Categories Table
   await sql`
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
@@ -32,7 +44,7 @@ export async function initDatabase() {
     );
   `;
 
-  // 2. Create Templates Tables
+  // 3. Create Templates Tables
   await sql`
     CREATE TABLE IF NOT EXISTS templates (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,7 +94,7 @@ export async function initDatabase() {
     );
   `;
 
-  // 3. Seed Initial Templates if table is empty
+  // 4. Seed Initial Templates if table is empty
   const { rowCount } = await sql`SELECT id FROM templates LIMIT 1`;
   if (rowCount === 0) {
     for (const t of INITIAL_TEMPLATES) {
@@ -92,6 +104,10 @@ export async function initDatabase() {
       `;
     }
   }
+
+  // 5. Final Permission Sync
+  await sql`GRANT ALL ON ALL TABLES IN SCHEMA public TO public;`;
+  await sql`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO public;`;
 }
 
 // Categories

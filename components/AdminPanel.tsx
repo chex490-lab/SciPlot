@@ -4,7 +4,7 @@ import { Template, MemberCode, UsageLog, Category } from '../types';
 import { Button } from './Button';
 import { api } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers, ShieldCheck } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -59,11 +59,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       if (activeTab === 'logs') await fetchLogs();
       if (activeTab === 'categories') await fetchCategories();
     } catch (err: any) {
-      if (err.message?.includes('relation') || err.message?.includes('does not exist')) {
-        setDbError(t.dbError);
-      } else {
-        setDbError(err.message);
-      }
+      setDbError(err.message || "Unable to fetch data");
     }
   };
 
@@ -71,7 +67,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setIsInitializing(true);
     try {
       await api.initDatabase();
-      alert('数据库初始化成功！');
+      alert('数据库初始化/修复成功！权限已重置。');
       setDbError(null);
       loadData();
     } catch (err: any) {
@@ -268,7 +264,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setShowCodeForm(true);
   };
 
-  // Fix: Added missing handleAddNewCodeClick function to initialize form for a new code
   const handleAddNewCodeClick = () => {
     setEditingCodeId(null);
     setNewCode({ name: '', maxUses: 0, expiresAt: '' });
@@ -337,26 +332,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
              {t.logsTab}
            </button>
          </div>
-         <Button variant="ghost" onClick={onClose}>{t.cancel}</Button>
+         <div className="flex items-center gap-2">
+           <Button 
+             variant="secondary" 
+             size="sm" 
+             onClick={handleInitDatabase} 
+             isLoading={isInitializing}
+             title="手动导入数据后，点此修复权限与同步"
+             className="border-indigo-200 text-indigo-600"
+           >
+             <ShieldCheck size={16} className="mr-2" />
+             修复数据库权限
+           </Button>
+           <Button variant="ghost" onClick={onClose}>{t.cancel}</Button>
+         </div>
        </div>
 
        <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
          
          {dbError && (
-           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
-             <div className="flex items-center gap-3 text-amber-800 text-sm">
+           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+             <div className="flex items-center gap-3 text-red-800 text-sm">
                <AlertCircle size={20} className="shrink-0" />
-               <p className="font-medium">{dbError}</p>
+               <div>
+                 <p className="font-bold">数据库连接异常</p>
+                 <p className="text-xs opacity-80">{dbError}</p>
+               </div>
              </div>
              <Button 
                size="sm" 
                variant="primary" 
                onClick={handleInitDatabase} 
                isLoading={isInitializing}
-               className="bg-amber-600 hover:bg-amber-700 border-none shrink-0"
+               className="bg-red-600 hover:bg-red-700 border-none shrink-0"
              >
                <Database size={16} className="mr-2" />
-               {t.initDb}
+               一键修复环境
              </Button>
            </div>
          )}
@@ -480,7 +491,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={4} className="p-8 text-center text-slate-400 italic">暂无模板数据</td></tr>
+                      <tr><td colSpan={4} className="p-8 text-center text-slate-400 italic">暂无模板数据（若已导入SQL，请点击右上角修复权限）</td></tr>
                     )}
                   </tbody>
                 </table>
