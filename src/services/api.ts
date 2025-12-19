@@ -1,5 +1,5 @@
 
-import { Template, MemberCode, UsageLog } from '../../types';
+import { Template, MemberCode, UsageLog, Category } from '../../types';
 import { INITIAL_TEMPLATES } from '../../constants';
 
 const getHeaders = () => {
@@ -54,14 +54,12 @@ export const api = {
           cache: 'no-store'
         });
         
-        // If API explicitly fails with 500 or 404, we might consider fallback
         if (!res.ok) {
            const data = await res.json();
-           // If DB not initialized, formatted error contains it
            if (data.error?.includes('relation "templates" does not exist')) {
               return INITIAL_TEMPLATES;
            }
-           return []; // Return empty instead of hardcoded if it's a real DB error but initialized
+           return [];
         }
         
         const data = await res.json();
@@ -95,6 +93,41 @@ export const api = {
 
   deleteTemplate: async (id: string) => {
     const res = await fetch(`/api/templates?id=${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    return handleResponse(res);
+  },
+
+  // Category API
+  getCategories: async (): Promise<Category[]> => {
+    const res = await fetch('/api/categories', { headers: getHeaders(), cache: 'no-store' });
+    return handleResponse(res);
+  },
+
+  createCategory: async (name: string): Promise<Category> => {
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ name }),
+      cache: 'no-store'
+    });
+    return handleResponse(res);
+  },
+
+  updateCategory: async (id: number, name: string) => {
+    const res = await fetch('/api/categories', {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ id, name }),
+      cache: 'no-store'
+    });
+    return handleResponse(res);
+  },
+
+  deleteCategory: async (id: number) => {
+    const res = await fetch(`/api/categories?id=${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
       cache: 'no-store'

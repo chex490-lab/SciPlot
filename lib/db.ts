@@ -23,7 +23,16 @@ export interface MemberCode {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function initDatabase() {
-  // 1. Create Tables
+  // 1. Create Categories Table
+  await sql`
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) UNIQUE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  // 2. Create Templates Tables
   await sql`
     CREATE TABLE IF NOT EXISTS templates (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -33,11 +42,19 @@ export async function initDatabase() {
       code TEXT,
       language VARCHAR(50),
       tags TEXT[],
+      category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
+
+  // Migration: Add category_id to templates if it doesn't exist (safety)
+  try {
+    await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL`;
+  } catch (e) {
+    console.log("Migration skip: category_id likely exists");
+  }
 
   await sql`
     CREATE TABLE IF NOT EXISTS member_codes (
@@ -65,7 +82,7 @@ export async function initDatabase() {
     );
   `;
 
-  // 2. Seed Initial Templates if table is empty
+  // 3. Seed Initial Templates if table is empty
   const { rowCount } = await sql`SELECT id FROM templates LIMIT 1`;
   if (rowCount === 0) {
     for (const t of INITIAL_TEMPLATES) {
@@ -77,21 +94,48 @@ export async function initDatabase() {
   }
 }
 
+// Categories
+export async function getAllCategories() {
+  const { rows } = await sql`SELECT * FROM categories ORDER BY name ASC`;
+  return rows;
+}
+
+export async function createCategory(name: string) {
+  const { rows } = await sql`INSERT INTO categories (name) VALUES (${name}) RETURNING *`;
+  return rows[0];
+}
+
+export async function updateCategory(id: number, name: string) {
+  await sql`UPDATE categories SET name = ${name} WHERE id = ${id}`;
+}
+
+export async function deleteCategory(id: number) {
+  await sql`DELETE FROM categories WHERE id = ${id}`;
+}
+
 // Templates
 export async function getAllTemplates(activeOnly = true) {
-  if (activeOnly) {
-    // Treat NULL as active for older rows
-    const { rows } = await sql`SELECT * FROM templates WHERE is_active IS NOT FALSE ORDER BY created_at DESC`;
-    return rows;
-  }
-  const { rows } = await sql`SELECT * FROM templates ORDER BY created_at DESC`;
+  const query = activeOnly 
+    ? sql`
+        SELECT t.*, c.name as category_name 
+        FROM templates t 
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.is_active IS NOT FALSE 
+        ORDER BY t.created_at DESC`
+    : sql`
+        SELECT t.*, c.name as category_name 
+        FROM templates t 
+        LEFT JOIN categories c ON t.category_id = c.id
+        ORDER BY t.created_at DESC`;
+        
+  const { rows } = await query;
   return rows;
 }
 
 export async function createTemplate(t: any) {
   const { rows } = await sql`
-    INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
-    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.is_active})
+    INSERT INTO templates (title, description, image_url, code, language, tags, category_id, is_active)
+    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.category_id || null}, ${t.is_active})
     RETURNING *
   `;
   return rows[0];
@@ -108,6 +152,7 @@ export async function updateTemplate(id: string, t: any) {
         code = COALESCE(${t.code}, code),
         language = COALESCE(${t.language}, language),
         tags = COALESCE(${t.tags as any}, tags),
+        category_id = ${t.category_id === undefined ? null : t.category_id},
         is_active = COALESCE(${t.is_active}, is_active),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
@@ -116,13 +161,11 @@ export async function updateTemplate(id: string, t: any) {
 
 export async function deleteTemplate(id: string) {
   if (!UUID_REGEX.test(id)) return;
-  // 先删除关联的日志，避免外键约束报错
   await sql`DELETE FROM usage_logs WHERE template_id = ${id}`;
-  // 再删除模板本身
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
-// Member Codes
+// Member Codes (remains unchanged but included for completeness)
 export async function getAllMemberCodes() {
   const { rows } = await sql`SELECT * FROM member_codes ORDER BY created_at DESC`;
   return rows;

@@ -1,3 +1,10 @@
+
+export interface Category {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
 export interface Template {
   id: string;
   title: string;
@@ -6,6 +13,8 @@ export interface Template {
   code: string;
   language: 'python' | 'r' | 'matlab' | 'latex';
   tags: string[];
+  category_id?: number | null;
+  category_name?: string | null;
   createdAt: number;
   isActive?: boolean;
 }

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Template, MemberCode, UsageLog } from '../types';
+import { Template, MemberCode, UsageLog, Category } from '../types';
 import { Button } from './Button';
 import { api } from '../src/services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -12,10 +12,11 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'templates' | 'codes' | 'logs'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'codes' | 'logs' | 'categories'>('templates');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [codes, setCodes] = useState<MemberCode[]>([]);
   const [logs, setLogs] = useState<UsageLog[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const { t } = useLanguage();
@@ -26,7 +27,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [isSubmittingTemplate, setIsSubmittingTemplate] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
     language: 'python',
-    tags: []
+    tags: [],
+    category_id: null
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
@@ -36,6 +38,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [editingCodeId, setEditingCodeId] = useState<number | null>(null);
   const [newCode, setNewCode] = useState({ name: '', maxUses: 0, expiresAt: '' });
 
+  // Category Form States
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [activeTab]);
@@ -43,9 +51,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const loadData = async () => {
     setDbError(null);
     try {
-      if (activeTab === 'templates') await fetchTemplates();
+      if (activeTab === 'templates') {
+        await fetchTemplates();
+        await fetchCategories();
+      }
       if (activeTab === 'codes') await fetchCodes();
       if (activeTab === 'logs') await fetchLogs();
+      if (activeTab === 'categories') await fetchCategories();
     } catch (err: any) {
       if (err.message?.includes('relation') || err.message?.includes('does not exist')) {
         setDbError(t.dbError);
@@ -84,6 +96,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setLogs(data);
   };
 
+  const fetchCategories = async () => {
+    const data = await api.getCategories();
+    setCategories(data);
+  };
+
   const processFile = (file: File) => {
     if (file.size > 2 * 1024 * 1024) {
       alert(t.fileLimit);
@@ -114,7 +131,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         const file = items[i].getAsFile();
         if (file) {
           processFile(file);
-          // 如果找到了图片并处理，通常可以停止循环
           break;
         }
       }
@@ -133,7 +149,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     
     setIsSubmittingTemplate(true);
     try {
-      const tags = typeof newTemplate.tags === 'string' ? (newTemplate.tags as string).split(',').map((s: string) => s.trim()) : newTemplate.tags;
+      const tags = typeof newTemplate.tags === 'string' 
+        ? (newTemplate.tags as string).split(',').map((s: string) => s.trim()) 
+        : newTemplate.tags;
       
       if (newTemplate.id) {
         await api.updateTemplate({ ...newTemplate, tags });
@@ -142,7 +160,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       }
       
       setShowTemplateForm(false);
-      setNewTemplate({ language: 'python', tags: [] });
+      setNewTemplate({ language: 'python', tags: [], category_id: null });
       setImagePreview(null);
       await fetchTemplates();
     } catch (err: any) {
@@ -160,6 +178,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       code: template.code,
       language: template.language || 'python',
       tags: Array.isArray(template.tags) ? template.tags : [],
+      category_id: template.category_id || null,
       imageUrl: template.imageUrl
     });
     setImagePreview(template.imageUrl);
@@ -167,9 +186,46 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   };
 
   const handleAddNewTemplateClick = () => {
-    setNewTemplate({ language: 'python', tags: [] });
+    setNewTemplate({ language: 'python', tags: [], category_id: null });
     setImagePreview(null);
     setShowTemplateForm(true);
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    setIsSubmittingCategory(true);
+    try {
+      if (editingCategoryId) {
+        await api.updateCategory(editingCategoryId, newCategoryName);
+      } else {
+        await api.createCategory(newCategoryName);
+      }
+      setNewCategoryName('');
+      setEditingCategoryId(null);
+      setShowCategoryForm(false);
+      await fetchCategories();
+    } catch (err: any) {
+      alert(err.message || "操作失败");
+    } finally {
+      setIsSubmittingCategory(false);
+    }
+  };
+
+  const handleEditCategory = (cat: Category) => {
+    setEditingCategoryId(cat.id);
+    setNewCategoryName(cat.name);
+    setShowCategoryForm(true);
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm(t.deleteConfirm)) return;
+    try {
+      await api.deleteCategory(id);
+      await fetchCategories();
+    } catch (err: any) {
+      alert(err.message || "删除失败");
+    }
   };
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
@@ -177,7 +233,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setIsGeneratingCode(true);
     try {
       const expiresAtIso = newCode.expiresAt ? new Date(newCode.expiresAt).toISOString() : null;
-      
       if (editingCodeId) {
         await api.updateMemberCode({ 
           id: editingCodeId,
@@ -192,7 +247,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           expiresAt: expiresAtIso
         });
       }
-      
       setShowCodeForm(false);
       setEditingCodeId(null);
       setNewCode({ name: '', maxUses: 0, expiresAt: '' });
@@ -214,6 +268,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     setShowCodeForm(true);
   };
 
+  // Fix: Added missing handleAddNewCodeClick function to initialize form for a new code
   const handleAddNewCodeClick = () => {
     setEditingCodeId(null);
     setNewCode({ name: '', maxUses: 0, expiresAt: '' });
@@ -262,6 +317,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'templates' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
            >
              {t.templatesTab}
+           </button>
+           <button 
+             onClick={() => setActiveTab('categories')}
+             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'categories' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+           >
+             {t.categoriesTab}
            </button>
            <button 
              onClick={() => setActiveTab('codes')}
@@ -318,18 +379,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                     <button onClick={() => setShowTemplateForm(false)} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
                  </div>
                  <form onSubmit={handleTemplateSubmit} onPaste={handlePaste} className="space-y-5">
-                    <div className="space-y-4">
-                      <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
-                      <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
-                      
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
+                        
+                        <select 
+                          className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                          value={newTemplate.category_id || ''}
+                          onChange={e => setNewTemplate({...newTemplate, category_id: e.target.value ? parseInt(e.target.value) : null})}
+                        >
+                          <option value="">{t.selectCategory} ({t.noCategory})</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </select>
+
+                        <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
+                        
+                        <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                      </div>
+
                       <div className="space-y-2">
                         <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-2">
                           <ImageIcon size={14} /> {t.previewImage}
                         </label>
-                        <div className="flex gap-4 items-start">
+                        <div className="flex gap-4 items-start h-full">
                           <div 
                             onClick={() => fileInputRef.current?.click()}
-                            className={`flex-1 min-h-[120px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${imagePreview ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+                            className={`flex-1 min-h-[200px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${imagePreview ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
                           >
                             <input 
                               type="file" 
@@ -340,7 +417,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             />
                             {imagePreview ? (
                               <div className="flex flex-col items-center gap-2 py-4">
-                                <img src={imagePreview} className="h-24 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
+                                <img src={imagePreview} className="max-h-40 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
                                 <span className="text-xs text-indigo-600 font-medium">点击更换图片 (支持粘贴)</span>
                               </div>
                             ) : (
@@ -353,21 +430,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                               </>
                             )}
                           </div>
-                          {imagePreview && (
-                            <button 
-                              type="button" 
-                              onClick={clearImage}
-                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
-                            >
-                              <CloseIcon size={20} />
-                            </button>
-                          )}
                         </div>
                       </div>
-
-                      <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-48 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
-                      <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
                     </div>
+
+                    <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-64 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
 
                     <div className="flex justify-end gap-3 pt-2">
                       <Button type="button" variant="secondary" onClick={() => setShowTemplateForm(false)}>{t.cancel}</Button>
@@ -382,6 +449,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                   <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="p-4">{t.templateTitle}</th>
+                      <th className="p-4">{t.category}</th>
                       <th className="p-4">{t.status}</th>
                       <th className="p-4">{t.actions}</th>
                     </tr>
@@ -394,6 +462,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             <img src={tmp.imageUrl} className="w-10 h-10 object-cover rounded border border-slate-100" />
                             {tmp.title}
                           </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-slate-500">{tmp.category_name || t.noCategory}</span>
                         </td>
                         <td className="p-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tmp.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -409,12 +480,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">暂无模板数据</td></tr>
+                      <tr><td colSpan={4} className="p-8 text-center text-slate-400 italic">暂无模板数据</td></tr>
                     )}
                   </tbody>
                 </table>
              </div>
            </div>
+         )}
+
+         {activeTab === 'categories' && (
+            <div className="space-y-4">
+               <div className="flex justify-between items-center">
+                 <h3 className="text-lg font-bold text-slate-800">{t.categoriesTab}</h3>
+                 {!showCategoryForm && (
+                   <Button onClick={() => { setShowCategoryForm(true); setEditingCategoryId(null); setNewCategoryName(''); }} size="sm">
+                     <Plus size={16} className="mr-2"/> {t.newCategory}
+                   </Button>
+                 )}
+               </div>
+
+               {showCategoryForm && (
+                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-in slide-in-from-top-2 duration-200">
+                   <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-md font-bold text-slate-700">{editingCategoryId ? t.edit : t.newCategory}</h4>
+                      <button onClick={() => setShowCategoryForm(false)} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
+                   </div>
+                   <form onSubmit={handleCategorySubmit} className="flex gap-4">
+                      <input 
+                        required 
+                        className="flex-1 border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" 
+                        placeholder={t.categoryName} 
+                        value={newCategoryName} 
+                        onChange={e => setNewCategoryName(e.target.value)} 
+                        autoFocus
+                      />
+                      <Button type="submit" isLoading={isSubmittingCategory}>{t.save}</Button>
+                   </form>
+                 </div>
+               )}
+
+               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="p-4">{t.name}</th>
+                        <th className="p-4">{t.time}</th>
+                        <th className="p-4">{t.actions}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categories.length > 0 ? categories.map(cat => (
+                        <tr key={cat.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="p-4 font-medium text-slate-700">{cat.name}</td>
+                          <td className="p-4 text-slate-400">{new Date(cat.created_at).toLocaleDateString()}</td>
+                          <td className="p-4">
+                            <div className="flex gap-2">
+                              <button onClick={() => handleEditCategory(cat)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil size={16}/></button>
+                              <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16}/></button>
+                            </div>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan={3} className="p-8 text-center text-slate-400 italic">暂无分类数据</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
          )}
 
          {/* Codes Tab */}

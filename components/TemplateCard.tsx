@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Template } from '../types';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Layers } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface TemplateCardProps {
@@ -21,7 +21,6 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
     }
   };
 
-  // Ensure tags is always an array
   const tags = Array.isArray(template.tags) ? template.tags : [];
 
   return (
@@ -38,10 +37,16 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
             (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/800/600';
           }}
         />
-        <div className="absolute top-2 right-2 flex gap-2">
-          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full uppercase font-semibold">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-2">
+          <div className="bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full uppercase font-bold tracking-wider">
             {template.language || 'Code'}
           </div>
+          {template.category_name && (
+            <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Layers size={10} />
+              <span className="font-semibold">{template.category_name}</span>
+            </div>
+          )}
         </div>
       </div>
       
@@ -67,12 +72,10 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
         
         <div className="flex flex-wrap gap-2 mt-auto">
           {tags.length > 0 ? tags.map(tag => (
-            <span key={tag} className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
+            <span key={tag} className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-tight">
               #{tag}
             </span>
-          )) : (
-            <span className="text-xs text-slate-300 italic">No tags</span>
-          )}
+          )) : null}
         </div>
       </div>
     </div>

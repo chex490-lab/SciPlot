@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Template } from '../types';
-import { X, Copy, Check, ZoomIn, Lock } from 'lucide-react';
+import { X, Copy, Check, ZoomIn, Lock, Layers } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -29,7 +29,6 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   const handleCopy = async () => {
     if (canViewCode) {
         try {
-          // 优先使用现代 Clipboard API
           if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(template.code);
             setCopied(true);
@@ -37,11 +36,9 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
             throw new Error('Clipboard API unavailable');
           }
         } catch (err) {
-          // 针对手机端部分浏览器的回退方案
           try {
             const textArea = document.createElement("textarea");
             textArea.value = template.code;
-            // 确保 textarea 在屏幕外不可见但可操作
             textArea.style.position = "fixed";
             textArea.style.left = "-9999px";
             textArea.style.top = "0";
@@ -59,7 +56,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
           }
         }
         
-        if (copied || true) { // 只要触发了成功逻辑就显示已复制
+        if (copied || true) {
           setTimeout(() => setCopied(false), 2000);
         }
     } else {
@@ -114,10 +111,18 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
             </div>
 
             <div className="p-6 overflow-y-auto flex-grow bg-slate-50">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{template.title}</h2>
-              <div className="flex gap-2 mb-4">
+              <div className="flex items-center justify-between gap-4 mb-2">
+                <h2 className="text-2xl font-bold text-slate-900">{template.title}</h2>
+                {template.category_name && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 shrink-0">
+                    <Layers size={14} />
+                    {template.category_name}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
                  {template.tags.map(tag => (
-                  <span key={tag} className="px-2.5 py-0.5 rounded-full bg-white text-indigo-700 text-xs font-medium border border-indigo-100 shadow-sm">
+                  <span key={tag} className="px-2.5 py-0.5 rounded-full bg-white text-slate-500 text-[10px] font-bold border border-slate-200 shadow-sm uppercase">
                     {tag}
                   </span>
                 ))}

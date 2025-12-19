@@ -31,6 +31,10 @@ const translations = {
     descriptionPlaceholder: "解释此图表的用途以及使用的库...",
     language: "语言",
     tags: "标签",
+    category: "分类",
+    categoryManagement: "分类管理",
+    selectCategory: "选择分类",
+    noCategory: "未分类",
     previewImage: "预览图片",
     uploadFile: "上传文件",
     dragDrop: "或拖拽上传",
@@ -43,8 +47,11 @@ const translations = {
     templatesTab: "模板管理",
     codesTab: "会员码管理",
     logsTab: "使用日志",
+    categoriesTab: "分类管理",
     mgmtTitle: "模板管理",
     newTemplate: "新建模板",
+    newCategory: "新建分类",
+    categoryName: "分类名称",
     status: "状态",
     actions: "操作",
     generateCode: "生成会员码",
@@ -53,7 +60,7 @@ const translations = {
     time: "时间",
     logResult: "操作结果",
     usage: "使用情况",
-    save: "保存保存",
+    save: "保存",
     name: "名称",
     code: "代码",
     ip: "IP地址",
@@ -85,7 +92,8 @@ const translations = {
     expired: "已过期",
     // Contact feature
     contactAdmin: "有问题及时联系管理员",
-    emailCopied: "邮箱已复制，请及时联系管理员"
+    emailCopied: "邮箱已复制，请及时联系管理员",
+    allCategories: "全部类别"
   }
 };
 
@@ -100,12 +108,11 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Always default to Chinese (zh)
   const [language] = useState<Language>('zh'); 
   
   const value = {
     language,
-    setLanguage: () => {}, // Disable language switching
+    setLanguage: () => {}, 
     t: translations.zh
   };
 
