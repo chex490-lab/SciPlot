@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { X, Lock, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../contexts/LanguageContext';
-import { api } from '../src/services/api';
+import { api } from '../services/api';
 
 interface Props {
   templateId: string;

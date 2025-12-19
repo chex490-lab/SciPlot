@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Template, MemberCode, UsageLog, Category } from '../types';
 import { Button } from './Button';
-import { api } from '../src/services/api';
+import { api } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers } from 'lucide-react';
 

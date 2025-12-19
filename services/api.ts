@@ -1,6 +1,6 @@
 
-import { Template, MemberCode, UsageLog, Category } from '../../types';
-import { INITIAL_TEMPLATES } from '../../constants';
+import { Template, MemberCode, UsageLog, Category } from '../types';
+import { INITIAL_TEMPLATES } from '../constants';
 
 const getHeaders = () => {
   const token = localStorage.getItem('auth_token');
@@ -124,8 +124,13 @@ export const api = {
 
   // Category API
   getCategories: async (): Promise<Category[]> => {
-    const res = await fetch('/api/categories', { headers: getHeaders(), cache: 'no-store' });
-    return handleResponse(res);
+    try {
+      const res = await fetch('/api/categories', { headers: getHeaders(), cache: 'no-store' });
+      return await handleResponse(res);
+    } catch (e) {
+      console.warn("API GetCategories Error:", e);
+      return [];
+    }
   },
 
   createCategory: async (name: string): Promise<Category> => {

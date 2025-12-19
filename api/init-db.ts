@@ -6,20 +6,20 @@ export const config = {
   runtime: 'edge',
 };
 
+const JSON_HEADER = { 'Content-Type': 'application/json' };
+
 export default async function handler(req: Request) {
   try {
-    // 允许通过管理员登录后的 Token 进行初始化
     const isAuth = await isAuthenticated(req);
     const authHeader = req.headers.get('Authorization');
     
-    // 兼容两种方式：管理员 Token 或 环境变量中的原始密码
     if (!isAuth && authHeader !== `Bearer ${process.env.ADMIN_PASSWORD}`) {
-       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: JSON_HEADER });
     }
     
     await initDatabase();
-    return new Response(JSON.stringify({ success: true }));
+    return new Response(JSON.stringify({ success: true }), { headers: JSON_HEADER });
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: JSON_HEADER });
   }
 }

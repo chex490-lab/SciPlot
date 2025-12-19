@@ -9,7 +9,7 @@ import { MemberCodeModal } from './components/MemberCodeModal';
 import { Button } from './components/Button';
 import { Search, Plus, LayoutGrid, Beaker, UserCog, LogOut, Loader2, Inbox, Mail, CheckCircle2, Filter } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
-import { api } from './src/services/api';
+import { api } from './services/api';
 
 export default function App() {
   const [templates, setTemplates] = useState<Template[]>([]);
