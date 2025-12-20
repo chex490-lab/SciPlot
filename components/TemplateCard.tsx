@@ -28,11 +28,11 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({ template, isAdmin, o
       className="group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all cursor-pointer flex flex-col h-full relative"
       onClick={() => onClick(template)}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-white border-b border-slate-100">
+      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <img 
           src={template.imageUrl || 'https://picsum.photos/seed/plot/800/600'} 
           alt={template.title}
-          className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/800/600';
           }}
