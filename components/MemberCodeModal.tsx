@@ -17,20 +17,44 @@ export const MemberCodeModal: React.FC<Props> = ({ templateId, onSuccess, onClos
   const [error, setError] = useState('');
   const { t } = useLanguage();
 
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1. Remove all non-alphanumeric characters and convert to uppercase
+    let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    
+    // 2. Limit to 8 characters (the actual code is 8 chars excluding the hyphen)
+    if (val.length > 8) {
+      val = val.slice(0, 8);
+    }
+
+    // 3. Format with hyphen: XXXX-XXXX
+    let formatted = val;
+    if (val.length > 4) {
+      formatted = val.slice(0, 4) + '-' + val.slice(4);
+    }
+    
+    setCode(formatted);
+    setError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!code || code.length < 9) {
+      setError('请输入完整的 8 位会员码');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const result = await api.verifyCode(code, templateId);
+      const result = await api.verifyCode(code.trim(), templateId);
       if (result.success) {
         onSuccess();
       } else {
         setError(result.error || '验证失败，请检查会员码');
       }
-    } catch (err) {
-      setError('网络请求失败');
+    } catch (err: any) {
+      setError(err.message || '网络请求失败');
     } finally {
       setLoading(false);
     }
@@ -55,18 +79,23 @@ export const MemberCodeModal: React.FC<Props> = ({ templateId, onSuccess, onClos
             <input
               type="text"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={handleCodeChange}
               placeholder={t.verifyPlaceholder}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono text-center text-lg tracking-widest"
+              maxLength={9}
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono text-center text-xl tracking-widest bg-slate-50 focus:bg-white transition-all shadow-inner"
               autoFocus
             />
-            {error && <p className="text-red-500 text-xs mt-2 text-center">{error}</p>}
+            {error && <p className="text-red-500 text-xs mt-2 text-center font-medium">{error}</p>}
           </div>
           
-          <Button type="submit" className="w-full py-3" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+          <Button type="submit" className="w-full py-3 text-base shadow-md" disabled={loading}>
+            {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : null}
             {t.verifyBtn}
           </Button>
+          
+          <p className="text-[10px] text-slate-400 text-center uppercase tracking-tighter">
+            格式示例: ABCD-1234
+          </p>
         </form>
       </div>
     </div>

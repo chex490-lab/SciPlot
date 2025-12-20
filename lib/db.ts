@@ -231,13 +231,14 @@ export async function updateMemberCode(id: number, data: Partial<MemberCode>) {
 }
 
 export async function verifyMemberCode(code: string) {
-  const { rows } = await sql`SELECT * FROM member_codes WHERE code = ${code}`;
+  // Use ILIKE or UPPER() for case-insensitive matching
+  const { rows } = await sql`SELECT * FROM member_codes WHERE UPPER(code) = UPPER(${code.trim()})`;
   const memberCode = rows[0];
 
-  if (!memberCode) throw new Error("Invalid code/请联系管理员chex490@gmail.com");
-  if (!memberCode.is_active) throw new Error("Code is inactive");
-  if (memberCode.expires_at && new Date(memberCode.expires_at) < new Date()) throw new Error("Code expired");
-  if (memberCode.max_uses > 0 && memberCode.used_count >= memberCode.max_uses) throw new Error("Max uses reached");
+  if (!memberCode) throw new Error("无效的会员码，请联系管理员 chex490@gmail.com");
+  if (!memberCode.is_active) throw new Error("该会员码已被禁用");
+  if (memberCode.expires_at && new Date(memberCode.expires_at) < new Date()) throw new Error("该会员码已过期");
+  if (memberCode.max_uses > 0 && memberCode.used_count >= memberCode.max_uses) throw new Error("该会员码使用次数已达上限");
 
   return memberCode;
 }
