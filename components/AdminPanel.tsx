@@ -6,6 +6,158 @@ import { api } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers, ShieldCheck, Eye, EyeOff, Timer, Infinity } from 'lucide-react';
 
+interface TemplateFormProps {
+  isEdit?: boolean;
+  newTemplate: Partial<Template>;
+  setNewTemplate: React.Dispatch<React.SetStateAction<Partial<Template>>>;
+  categories: Category[];
+  imagePreview: string | null;
+  setImagePreview: (val: string | null) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+  t: any;
+}
+
+const TemplateForm: React.FC<TemplateFormProps> = ({
+  isEdit = false,
+  newTemplate,
+  setNewTemplate,
+  categories,
+  imagePreview,
+  setImagePreview,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  t
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      alert(t.fileLimit);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setImagePreview(base64String);
+      setNewTemplate(prev => ({ ...prev, imageUrl: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          processFile(file);
+          break;
+        }
+      }
+    }
+  };
+
+  return (
+    <div className={`bg-white p-6 rounded-xl shadow-md border-2 border-indigo-100 animate-in slide-in-from-top-2 duration-200 ${isEdit ? 'm-4' : 'mb-6'}`}>
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-md font-bold text-slate-700">{isEdit ? t.editTemplateTitle : t.uploadNewTitle}</h4>
+        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
+      </div>
+      <form onSubmit={onSubmit} onPaste={handlePaste} className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.templateTitle}</label>
+              <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.category}</label>
+                <select 
+                  className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={newTemplate.category_id || ''}
+                  onChange={e => setNewTemplate({...newTemplate, category_id: e.target.value ? parseInt(e.target.value) : null})}
+                >
+                  <option value="">{t.selectCategory} ({t.noCategory})</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.isHiddenLabel}</label>
+                <select 
+                  className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
+                  value={newTemplate.isHidden ? 'yes' : 'no'}
+                  onChange={e => setNewTemplate({...newTemplate, isHidden: e.target.value === 'yes'})}
+                >
+                  <option value="yes">{t.yes}</option>
+                  <option value="no">{t.no}</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.description}</label>
+              <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.tags}</label>
+              <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-2">
+              <ImageIcon size={14} /> {t.previewImage}
+            </label>
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={`min-h-[250px] h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${imagePreview ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+            >
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+              {imagePreview ? (
+                <div className="flex flex-col items-center gap-2 py-4 px-2">
+                  <img src={imagePreview} className="max-h-52 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
+                  <span className="text-xs text-indigo-600 font-medium">点击更换图片 (支持粘贴)</span>
+                </div>
+              ) : (
+                <>
+                  <Upload className="text-slate-400" size={28} />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-slate-600">{t.uploadFile}</p>
+                    <p className="text-[10px] text-slate-400">{t.fileLimit}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.sourceCode}</label>
+          <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-80 focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="secondary" onClick={onCancel}>{t.cancel}</Button>
+          <Button type="submit" isLoading={isSubmitting} disabled={!imagePreview}>{t.save}</Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
   onClose: () => void;
@@ -20,7 +172,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [dbError, setDbError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const { t } = useLanguage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Template Form States
   const [showAddForm, setShowAddForm] = useState(false);
@@ -97,42 +248,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const fetchCategories = async () => {
     const data = await api.getCategories();
     setCategories(data);
-  };
-
-  const processFile = (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      alert(t.fileLimit);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setImagePreview(base64String);
-      setNewTemplate(prev => ({ ...prev, imageUrl: base64String }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image") !== -1) {
-        const file = items[i].getAsFile();
-        if (file) {
-          processFile(file);
-          break;
-        }
-      }
-    }
   };
 
   const handleTemplateSubmit = async (e: React.FormEvent) => {
@@ -315,102 +430,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     }
   };
 
-  const isExpired = (dateStr: string | null) => {
-    if (!dateStr) return false;
-    return new Date(dateStr) < new Date();
-  };
-
-  const TemplateForm = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className={`bg-white p-6 rounded-xl shadow-md border-2 border-indigo-100 animate-in slide-in-from-top-2 duration-200 ${isEdit ? 'm-4' : 'mb-6'}`}>
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="text-md font-bold text-slate-700">{isEdit ? t.editTemplateTitle : t.uploadNewTitle}</h4>
-        <button onClick={resetTemplateForm} className="text-slate-400 hover:text-slate-600"><CloseIcon size={20}/></button>
-      </div>
-      <form onSubmit={handleTemplateSubmit} onPaste={handlePaste} className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.templateTitle}</label>
-              <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.category}</label>
-                <select 
-                  className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={newTemplate.category_id || ''}
-                  onChange={e => setNewTemplate({...newTemplate, category_id: e.target.value ? parseInt(e.target.value) : null})}
-                >
-                  <option value="">{t.selectCategory} ({t.noCategory})</option>
-                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.isHiddenLabel}</label>
-                <select 
-                  className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
-                  value={newTemplate.isHidden ? 'yes' : 'no'}
-                  onChange={e => setNewTemplate({...newTemplate, isHidden: e.target.value === 'yes'})}
-                >
-                  <option value="yes">{t.yes}</option>
-                  <option value="no">{t.no}</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.description}</label>
-              <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.tags}</label>
-              <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-2">
-              <ImageIcon size={14} /> {t.previewImage}
-            </label>
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={`min-h-[250px] h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${imagePreview ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
-            >
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-              {imagePreview ? (
-                <div className="flex flex-col items-center gap-2 py-4 px-2">
-                  <img src={imagePreview} className="max-h-52 w-auto rounded-lg shadow-sm border border-white" alt="Preview" />
-                  <span className="text-xs text-indigo-600 font-medium">点击更换图片 (支持粘贴)</span>
-                </div>
-              ) : (
-                <>
-                  <Upload className="text-slate-400" size={28} />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-slate-600">{t.uploadFile}</p>
-                    <p className="text-[10px] text-slate-400">{t.fileLimit}</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">{t.sourceCode}</label>
-          <textarea required className="w-full border border-slate-200 p-2.5 rounded-lg font-mono text-xs h-80 focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50" placeholder={t.sourceCode} value={newTemplate.code || ''} onChange={e => setNewTemplate({...newTemplate, code: e.target.value})} />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={resetTemplateForm}>{t.cancel}</Button>
-          <Button type="submit" isLoading={isSubmittingTemplate} disabled={!imagePreview}>{t.save}</Button>
-        </div>
-      </form>
-    </div>
-  );
-
   return (
     <div className="h-[80vh] flex flex-col">
        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-white">
@@ -465,7 +484,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                )}
              </div>
              
-             {showAddForm && <TemplateForm />}
+             {showAddForm && (
+               <TemplateForm 
+                 newTemplate={newTemplate} 
+                 setNewTemplate={setNewTemplate} 
+                 categories={categories}
+                 imagePreview={imagePreview}
+                 setImagePreview={setImagePreview}
+                 onSubmit={handleTemplateSubmit}
+                 onCancel={resetTemplateForm}
+                 isSubmitting={isSubmittingTemplate}
+                 t={t}
+               />
+             )}
 
              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                 <table className="w-full text-sm text-left border-collapse">
@@ -535,7 +566,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         {editingTemplateId === tmp.id && (
                           <tr>
                             <td colSpan={5} className="bg-indigo-50/30 p-0 border-b border-indigo-100">
-                              <TemplateForm isEdit={true} />
+                              <TemplateForm 
+                                isEdit={true}
+                                newTemplate={newTemplate} 
+                                setNewTemplate={setNewTemplate} 
+                                categories={categories}
+                                imagePreview={imagePreview}
+                                setImagePreview={setImagePreview}
+                                onSubmit={handleTemplateSubmit}
+                                onCancel={resetTemplateForm}
+                                isSubmitting={isSubmittingTemplate}
+                                t={t}
+                              />
                             </td>
                           </tr>
                         )}
