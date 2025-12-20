@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Template } from '../types';
-import { X, Copy, Check, ZoomIn, Lock, Layers } from 'lucide-react';
+import { X, Copy, Check, ZoomIn, Lock, Layers, HeartHandshake } from 'lucide-react';
 import { Button } from './Button';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -64,6 +64,16 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
     }
   };
 
+  const handleContactAdminAction = () => {
+     const email = 'chex490@gmail.com';
+     try {
+       navigator.clipboard.writeText(email);
+       alert(t.emailCopied);
+     } catch (e) {
+       alert('请联系管理员邮箱: ' + email);
+     }
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -107,11 +117,11 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                 <span className="sm:hidden">查看大图</span>
               </Button>
               <Button 
-                onClick={handleCopy} 
+                onClick={template.isHidden !== false ? handleCopy : handleContactAdminAction} 
                 className={`flex items-center justify-center gap-2 py-2.5 shadow-sm transition-all ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
               >
-                {copied ? <Check size={18} /> : (canViewCode ? <Copy size={18} /> : <Lock size={18} />)}
-                <span>{copied ? t.copied : (canViewCode ? t.copyCode : t.copyClipboard)}</span>
+                {copied ? <Check size={18} /> : (canViewCode ? <Copy size={18} /> : (template.isHidden !== false ? <Lock size={18} /> : <HeartHandshake size={18} />))}
+                <span>{copied ? t.copied : (canViewCode ? t.copyCode : (template.isHidden !== false ? t.copyClipboard : t.contactAdminBtn))}</span>
               </Button>
             </div>
 
@@ -122,12 +132,19 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                   <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                     {template.title}
                   </h2>
-                  {template.category_name && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 shrink-0 shadow-sm">
-                      <Layers size={14} />
-                      {template.category_name}
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                     {template.category_name && (
+                       <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 shadow-sm">
+                         <Layers size={14} />
+                         {template.category_name}
+                       </span>
+                     )}
+                     {template.isHidden === false && !canViewCode && (
+                       <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200 shadow-sm animate-pulse">
+                         限时免费
+                       </span>
+                     )}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -164,14 +181,23 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                       </pre>
                   </div>
                 ) : (
-                  <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center group hover:border-indigo-200 transition-colors">
+                  <div className={`border-2 border-dashed rounded-xl p-10 text-center group transition-colors ${template.isHidden !== false ? 'bg-slate-100 border-slate-200 hover:border-indigo-200' : 'bg-emerald-50 border-emerald-100 hover:border-emerald-300'}`}>
                       <div className="bg-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                        <Lock className="text-slate-400" size={32} />
+                        {template.isHidden !== false ? <Lock className="text-slate-400" size={32} /> : <HeartHandshake className="text-emerald-500" size={32} />}
                       </div>
-                      <p className="text-lg text-slate-700 font-bold mb-1">{t.codeHidden}</p>
-                      <p className="text-sm text-slate-500">{t.codeHiddenDesc}</p>
-                      <Button onClick={onVerifyRequest} className="mt-6" size="lg">
-                        {t.copyClipboard}
+                      <p className="text-lg text-slate-700 font-bold mb-1">
+                        {template.isHidden !== false ? t.codeHidden : '免费代码获取'}
+                      </p>
+                      <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                        {template.isHidden !== false ? t.codeHiddenDesc : t.contactForFree}
+                      </p>
+                      <Button 
+                        onClick={template.isHidden !== false ? onVerifyRequest : handleContactAdminAction} 
+                        className="mt-6" 
+                        size="lg"
+                        variant={template.isHidden !== false ? 'primary' : 'secondary'}
+                      >
+                        {template.isHidden !== false ? t.copyClipboard : t.contactAdminBtn}
                       </Button>
                   </div>
                 )}

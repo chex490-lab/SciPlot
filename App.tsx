@@ -263,8 +263,12 @@ export default function App() {
           onClose={() => setSelectedTemplate(null)}
           isVerified={isAdmin} 
           onVerifyRequest={() => {
-             setSelectedTemplate(null);
-             setVerifyingTemplate(selectedTemplate);
+             if (selectedTemplate.isHidden !== false) {
+                setSelectedTemplate(null);
+                setVerifyingTemplate(selectedTemplate);
+             } else {
+                handleContactAdmin();
+             }
           }}
         />
       )}

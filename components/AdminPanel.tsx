@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Template, MemberCode, UsageLog, Category } from '../types';
 import { Button } from './Button';
 import { api } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, RotateCw, CheckCircle, XCircle, Database, AlertCircle, Upload, X as CloseIcon, Image as ImageIcon, Pencil, Calendar, Layers, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 interface AdminPanelProps {
   onAddTemplate: (template: Template) => void; 
@@ -28,7 +27,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
     language: 'python',
     tags: [],
-    category_id: null
+    category_id: null,
+    isHidden: true
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
@@ -156,7 +156,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       }
       
       setShowTemplateForm(false);
-      setNewTemplate({ language: 'python', tags: [], category_id: null });
+      setNewTemplate({ language: 'python', tags: [], category_id: null, isHidden: true });
       setImagePreview(null);
       await fetchTemplates();
     } catch (err: any) {
@@ -175,14 +175,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       language: template.language || 'python',
       tags: Array.isArray(template.tags) ? template.tags : [],
       category_id: template.category_id || null,
-      imageUrl: template.imageUrl
+      imageUrl: template.imageUrl,
+      isHidden: template.isHidden !== undefined ? template.isHidden : true
     });
     setImagePreview(template.imageUrl);
     setShowTemplateForm(true);
   };
 
   const handleAddNewTemplateClick = () => {
-    setNewTemplate({ language: 'python', tags: [], category_id: null });
+    setNewTemplate({ language: 'python', tags: [], category_id: null, isHidden: true });
     setImagePreview(null);
     setShowTemplateForm(true);
   };
@@ -279,12 +280,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     }
   };
 
+  // Added toggleCodeActive to handle member code status changes
   const toggleCodeActive = async (c: MemberCode) => {
     try {
       await api.updateMemberCode({ id: c.id, is_active: !c.is_active });
       await fetchCodes();
     } catch (err: any) {
-      alert("更新状态失败: " + err.message);
+      alert("更新状态失败: " + (err.message || "未知错误"));
     }
   };
 
@@ -394,20 +396,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       <div className="space-y-4">
                         <input required className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.templateTitle} value={newTemplate.title || ''} onChange={e => setNewTemplate({...newTemplate, title: e.target.value})} />
                         
-                        <select 
-                          className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                          value={newTemplate.category_id || ''}
-                          onChange={e => setNewTemplate({...newTemplate, category_id: e.target.value ? parseInt(e.target.value) : null})}
-                        >
-                          <option value="">{t.selectCategory} ({t.noCategory})</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
+                        <div className="grid grid-cols-2 gap-3">
+                           <select 
+                             className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                             value={newTemplate.category_id || ''}
+                             onChange={e => setNewTemplate({...newTemplate, category_id: e.target.value ? parseInt(e.target.value) : null})}
+                           >
+                             <option value="">{t.selectCategory} ({t.noCategory})</option>
+                             {categories.map(cat => (
+                               <option key={cat.id} value={cat.id}>{cat.name}</option>
+                             ))}
+                           </select>
+
+                           <div className="flex items-center gap-2 border border-slate-200 p-2 rounded-lg bg-slate-50">
+                              <span className="text-xs font-semibold text-slate-500 uppercase">{t.isHiddenLabel}</span>
+                              <select 
+                                 className="flex-1 bg-transparent text-sm font-medium outline-none text-indigo-600"
+                                 value={newTemplate.isHidden ? 'yes' : 'no'}
+                                 onChange={e => setNewTemplate({...newTemplate, isHidden: e.target.value === 'yes'})}
+                              >
+                                 <option value="yes">{t.yes}</option>
+                                 <option value="no">{t.no}</option>
+                              </select>
+                           </div>
+                        </div>
 
                         <textarea className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.description} rows={3} value={newTemplate.description || ''} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})} />
                         
                         <input className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t.tags + " (例如: Python, 柱状图, 3D)"} value={Array.isArray(newTemplate.tags) ? newTemplate.tags.join(', ') : newTemplate.tags || ''} onChange={e => setNewTemplate({...newTemplate, tags: e.target.value as any})} />
+                        
+                        <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                           <p className="text-[10px] text-amber-700 leading-relaxed italic">
+                             <strong>提示:</strong> {t.isHiddenDesc}
+                           </p>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -462,6 +484,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                       <th className="p-4">{t.templateTitle}</th>
                       <th className="p-4">{t.category}</th>
                       <th className="p-4">{t.status}</th>
+                      <th className="p-4">隐藏代码</th>
                       <th className="p-4">{t.actions}</th>
                     </tr>
                   </thead>
@@ -483,6 +506,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                           </span>
                         </td>
                         <td className="p-4">
+                           <div className="flex items-center gap-1.5">
+                              {tmp.isHidden ? <EyeOff size={14} className="text-amber-500" /> : <Eye size={14} className="text-emerald-500" />}
+                              <span className={`text-[10px] font-bold uppercase ${tmp.isHidden ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                 {tmp.isHidden ? t.yes : t.no}
+                              </span>
+                           </div>
+                        </td>
+                        <td className="p-4">
                            <div className="flex gap-2">
                              <button onClick={() => handleEditTemplate(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={t.edit}><Pencil size={16}/></button>
                              <button onClick={() => toggleTemplateActive(tmp)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="切换状态"><RotateCw size={16}/></button>
@@ -491,7 +522,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={4} className="p-8 text-center text-slate-400 italic">暂无模板数据（若已导入SQL，请点击右上角修复权限）</td></tr>
+                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 italic">暂无模板数据（若已导入SQL，请点击右上角修复权限）</td></tr>
                     )}
                   </tbody>
                 </table>

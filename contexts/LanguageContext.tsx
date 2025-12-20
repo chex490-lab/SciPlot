@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 export type Language = 'en' | 'zh';
 
@@ -93,7 +93,14 @@ const translations = {
     // Contact feature
     contactAdmin: "有问题及时联系管理员",
     emailCopied: "邮箱已复制，请及时联系管理员",
-    allCategories: "全部类别"
+    allCategories: "全部类别",
+    // Hidden feature
+    isHiddenLabel: "是否隐藏源代码？",
+    isHiddenDesc: "选择“是”需要会员码，选择“否”则提示联系管理员免费获取",
+    yes: "是",
+    no: "否",
+    contactForFree: "此模板限时免费！请联系管理员获取代码",
+    contactAdminBtn: "联系管理员免费获取"
   }
 };
 

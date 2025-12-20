@@ -5,6 +5,7 @@ import { INITIAL_TEMPLATES } from '../constants';
 
 export interface DBTemplate extends Template {
   is_active: boolean;
+  is_hidden: boolean;
   updated_at: string;
 }
 
@@ -63,6 +64,7 @@ export async function initDatabase() {
       tags TEXT[],
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       is_active BOOLEAN DEFAULT true,
+      is_hidden BOOLEAN DEFAULT true,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
@@ -71,6 +73,9 @@ export async function initDatabase() {
   // 迁移：确保列存在
   try {
     await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL`;
+  } catch (e) {}
+  try {
+    await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT true`;
   } catch (e) {}
 
   // 5. 创建会员码和日志表
@@ -116,8 +121,8 @@ export async function initDatabase() {
   if (rowCount === 0) {
     for (const t of INITIAL_TEMPLATES) {
       await sql`
-        INSERT INTO templates (title, description, image_url, code, language, tags, is_active)
-        VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, true)
+        INSERT INTO templates (title, description, image_url, code, language, tags, is_active, is_hidden)
+        VALUES (${t.title}, ${t.description}, ${t.imageUrl}, ${t.code}, ${t.language}, ${t.tags as any}, true, true)
       `;
     }
   }
@@ -167,8 +172,8 @@ export async function getAllTemplates(activeOnly = true) {
 
 export async function createTemplate(t: any) {
   const { rows } = await sql`
-    INSERT INTO templates (title, description, image_url, code, language, tags, category_id, is_active)
-    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.category_id || null}, ${t.is_active})
+    INSERT INTO templates (title, description, image_url, code, language, tags, category_id, is_active, is_hidden)
+    VALUES (${t.title}, ${t.description}, ${t.image_url}, ${t.code}, ${t.language}, ${t.tags as any}, ${t.category_id || null}, ${t.is_active}, ${t.is_hidden})
     RETURNING *
   `;
   return rows[0];
@@ -187,6 +192,7 @@ export async function updateTemplate(id: string, t: any) {
         tags = COALESCE(${t.tags as any}, tags),
         category_id = ${t.category_id === undefined ? null : t.category_id},
         is_active = COALESCE(${t.is_active}, is_active),
+        is_hidden = COALESCE(${t.is_hidden}, is_hidden),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
   `;

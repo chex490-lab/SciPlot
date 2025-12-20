@@ -27,12 +27,17 @@ export default async function handler(req: Request) {
         code: t.code || '',
         language: (t.language as any) || 'python',
         tags: Array.isArray(t.tags) ? t.tags : [],
-        // Robust boolean parsing for Postgres (handles 't', 'f', true, false, null, 'true', 'false')
+        // Robust boolean parsing for Postgres
         isActive: t.is_active === true || 
                   t.is_active === 't' || 
                   t.is_active === 'true' || 
                   t.is_active === null || 
                   t.is_active === undefined,
+        isHidden: t.is_hidden === true || 
+                  t.is_hidden === 't' || 
+                  t.is_hidden === 'true' || 
+                  t.is_hidden === null || 
+                  t.is_hidden === undefined,
         category_id: t.category_id,
         category_name: t.category_name,
         createdAt: t.created_at ? new Date(t.created_at).getTime() : Date.now()
@@ -45,7 +50,6 @@ export default async function handler(req: Request) {
         } 
       });
     } catch (e: any) {
-      // We removed the INITIAL_TEMPLATES fallback here to make real errors visible
       return new Response(JSON.stringify({ 
         error: e.message,
         details: "Database connection failed or tables missing. Please run 'Initialize Database' in Admin Panel." 
@@ -73,7 +77,8 @@ export default async function handler(req: Request) {
         language: body.language || 'python',
         tags: Array.isArray(body.tags) ? body.tags : [],
         category_id: body.category_id || null,
-        is_active: true
+        is_active: true,
+        is_hidden: body.isHidden !== undefined ? body.isHidden : true
       };
 
       const result = await createTemplate(dbData);
@@ -92,6 +97,10 @@ export default async function handler(req: Request) {
       if (Object.prototype.hasOwnProperty.call(body, 'isActive')) {
         updateData.is_active = body.isActive;
         delete updateData.isActive;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, 'isHidden')) {
+        updateData.is_hidden = body.isHidden;
+        delete updateData.isHidden;
       }
 
       await updateTemplate(body.id, updateData);

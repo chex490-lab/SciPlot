@@ -17,6 +17,7 @@ export interface Template {
   category_name?: string | null;
   createdAt: number;
   isActive?: boolean;
+  isHidden?: boolean;
 }
 
 export interface ChatMessage {
