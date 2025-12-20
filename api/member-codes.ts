@@ -1,4 +1,5 @@
-import { getAllMemberCodes, createMemberCode, updateMemberCode, getLogs } from '../lib/db';
+
+import { getAllMemberCodes, createMemberCode, updateMemberCode, deleteMemberCode, getLogs } from '../lib/db';
 import { isAuthenticated } from '../lib/auth';
 
 export const config = {
@@ -12,7 +13,8 @@ export default async function handler(req: Request) {
     }
 
     const url = new URL(req.url);
-    const type = url.searchParams.get('type'); // 'logs' or 'codes'
+    const type = url.searchParams.get('type');
+    const id = url.searchParams.get('id');
 
     if (type === 'logs') {
       const logs = await getLogs();
@@ -25,14 +27,20 @@ export default async function handler(req: Request) {
     }
 
     if (req.method === 'POST') {
-      const { name, maxUses, expiresAt } = await req.json();
-      const result = await createMemberCode(name, maxUses, expiresAt);
+      const { name, maxUses, expiresAt, isLongTerm } = await req.json();
+      const result = await createMemberCode(name, maxUses, expiresAt, isLongTerm);
       return new Response(JSON.stringify({ success: true, data: result }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     if (req.method === 'PUT') {
       const body = await req.json();
       await updateMemberCode(body.id, body);
+      return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (req.method === 'DELETE') {
+      if (!id) return new Response(JSON.stringify({ error: 'Missing ID' }), { status: 400 });
+      await deleteMemberCode(parseInt(id));
       return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
     }
 

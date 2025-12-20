@@ -34,6 +34,7 @@ export interface MemberCode {
   used_count: number;
   expires_at: string | null;
   is_active: boolean;
+  is_long_term: boolean;
   created_at: string;
 }
 

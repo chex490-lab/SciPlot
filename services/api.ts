@@ -170,7 +170,7 @@ export const api = {
     return await handleResponse(res);
   },
 
-  createMemberCode: async (data: { name: string; maxUses: number; expiresAt: string | null }) => {
+  createMemberCode: async (data: { name: string; maxUses: number; expiresAt: string | null; isLongTerm: boolean }) => {
     const res = await fetch('/api/member-codes', {
       method: 'POST',
       headers: getHeaders(),
@@ -185,6 +185,15 @@ export const api = {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(data),
+      cache: 'no-store'
+    });
+    return handleResponse(res);
+  },
+
+  deleteMemberCode: async (id: number) => {
+    const res = await fetch(`/api/member-codes?id=${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
       cache: 'no-store'
     });
     return handleResponse(res);
