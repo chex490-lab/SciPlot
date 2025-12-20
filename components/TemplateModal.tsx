@@ -72,78 +72,113 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
           onClick={onClose}
         />
         
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white rounded-full shadow-sm hover:shadow text-slate-500 hover:text-slate-800 transition-all"
-          >
-            <X size={20} />
-          </button>
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+          {/* Header Close Button - Sticky */}
+          <div className="absolute top-4 right-4 z-20">
+            <button 
+              onClick={onClose}
+              className="p-2 bg-white/90 hover:bg-white rounded-full shadow-md hover:shadow-lg text-slate-500 hover:text-slate-800 transition-all border border-slate-100"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-          <div className="w-full flex flex-col bg-slate-50 h-full">
-            <div className="h-64 sm:h-96 bg-white relative bg-pattern group shrink-0 border-b border-slate-100">
-               <div className="absolute inset-0 flex items-center justify-center p-6">
-                 <img 
-                   src={template.imageUrl} 
-                   alt={template.title}
-                   className="max-w-full max-h-full object-contain shadow-sm rounded bg-white cursor-pointer transition-transform hover:scale-[1.02]"
-                   onClick={() => setShowZoom(true)}
-                 />
-               </div>
+          {/* Main Scrollable Body */}
+          <div className="flex-grow overflow-y-auto custom-scrollbar bg-slate-50">
+            {/* Image Preview Area */}
+            <div className="w-full bg-white relative border-b border-slate-100 min-h-[300px] sm:min-h-[450px] flex items-center justify-center p-8">
+              <img 
+                src={template.imageUrl} 
+                alt={template.title}
+                className="max-w-full max-h-[400px] sm:max-h-[600px] object-contain shadow-lg rounded-lg bg-white cursor-pointer transition-transform hover:scale-[1.01]"
+                onClick={() => setShowZoom(true)}
+              />
             </div>
 
-            <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 gap-3 shrink-0">
+            {/* Action Buttons Bar */}
+            <div className="sticky top-0 z-10 p-4 bg-white/95 backdrop-blur-sm border-b border-slate-100 grid grid-cols-2 gap-3 shadow-sm">
               <Button 
                 variant="secondary" 
                 onClick={() => setShowZoom(true)}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 py-2.5"
               >
-                <ZoomIn size={16} />
-                {t.enlargePreview}
+                <ZoomIn size={18} />
+                <span className="hidden sm:inline">{t.enlargePreview}</span>
+                <span className="sm:hidden">查看大图</span>
               </Button>
               <Button 
                 onClick={handleCopy} 
-                className={`flex items-center gap-2 shadow-sm transition-all ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                className={`flex items-center justify-center gap-2 py-2.5 shadow-sm transition-all ${copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
               >
-                {copied ? <Check size={16} /> : (canViewCode ? <Copy size={16} /> : <Lock size={16} />)}
-                {copied ? t.copied : (canViewCode ? t.copyCode : t.copyClipboard)}
+                {copied ? <Check size={18} /> : (canViewCode ? <Copy size={18} /> : <Lock size={18} />)}
+                <span>{copied ? t.copied : (canViewCode ? t.copyCode : t.copyClipboard)}</span>
               </Button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-grow bg-slate-50">
-              <div className="flex items-center justify-between gap-4 mb-2">
-                <h2 className="text-2xl font-bold text-slate-900">{template.title}</h2>
-                {template.category_name && (
-                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 shrink-0">
-                    <Layers size={14} />
-                    {template.category_name}
+            {/* Content Details */}
+            <div className="p-6 sm:p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                    {template.title}
+                  </h2>
+                  {template.category_name && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100 shrink-0 shadow-sm">
+                      <Layers size={14} />
+                      {template.category_name}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                   {template.tags.map(tag => (
+                    <span key={tag} className="px-3 py-1 rounded-full bg-white text-slate-500 text-[11px] font-bold border border-slate-200 shadow-sm uppercase tracking-wider">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="text-slate-600 leading-relaxed text-base">
+                  {template.description}
+                </p>
+              </div>
+              
+              {/* Code Section */}
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                    {template.language || 'Source Code'}
                   </span>
+                  {canViewCode && (
+                    <span className="text-[10px] text-slate-400 font-medium italic">
+                      * 支持左右滑动查看完整代码
+                    </span>
+                  )}
+                </div>
+
+                {canViewCode ? (
+                  <div className="relative group">
+                      <pre className="bg-slate-900 text-slate-100 p-5 rounded-xl text-sm overflow-x-auto font-mono custom-scrollbar border border-slate-800 shadow-inner leading-relaxed">
+                          {template.code}
+                      </pre>
+                  </div>
+                ) : (
+                  <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-xl p-10 text-center group hover:border-indigo-200 transition-colors">
+                      <div className="bg-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                        <Lock className="text-slate-400" size={32} />
+                      </div>
+                      <p className="text-lg text-slate-700 font-bold mb-1">{t.codeHidden}</p>
+                      <p className="text-sm text-slate-500">{t.codeHiddenDesc}</p>
+                      <Button onClick={onVerifyRequest} className="mt-6" size="lg">
+                        {t.copyClipboard}
+                      </Button>
+                  </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                 {template.tags.map(tag => (
-                  <span key={tag} className="px-2.5 py-0.5 rounded-full bg-white text-slate-500 text-[10px] font-bold border border-slate-200 shadow-sm uppercase">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <p className="text-slate-600 leading-relaxed text-sm mb-4">
-                {template.description}
-              </p>
               
-              {canViewCode ? (
-                <div className="relative">
-                    <pre className="bg-slate-800 text-slate-100 p-4 rounded-lg text-xs overflow-x-auto font-mono custom-scrollbar">
-                        {template.code}
-                    </pre>
-                </div>
-              ) : (
-                <div className="bg-slate-100 border border-slate-200 rounded-lg p-6 text-center">
-                    <Lock className="mx-auto text-slate-400 mb-2" size={24} />
-                    <p className="text-sm text-slate-500 font-medium">{t.codeHidden}</p>
-                    <p className="text-xs text-slate-400 mt-1">{t.codeHiddenDesc}</p>
-                </div>
-              )}
+              {/* Footer Spacer */}
+              <div className="h-8"></div>
             </div>
           </div>
         </div>
@@ -151,13 +186,16 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
 
       {showZoom && (
         <div 
-          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300"
           onClick={() => setShowZoom(false)}
         >
+          <button className="absolute top-6 right-6 text-white/70 hover:text-white p-2">
+            <X size={32} />
+          </button>
           <img 
             src={template.imageUrl} 
             alt={template.title}
-            className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-lg"
+            className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
           />
         </div>
       )}
