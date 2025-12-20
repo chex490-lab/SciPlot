@@ -22,20 +22,27 @@ export interface MemberCode {
 // Simple UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/**
+ * 核心修复函数：解决手动导入数据后的序列不一致和权限问题
+ */
 export async function initDatabase() {
-  // 1. Repair Environment & Permissions
-  // This ensures that even after a CASCADE drop or manual import, the app can see the tables.
+  // 1. 基础权限同步（仅针对表和序列，不触碰扩展函数）
   try {
     await sql`GRANT USAGE ON SCHEMA public TO public;`;
     await sql`GRANT ALL ON ALL TABLES IN SCHEMA public TO public;`;
     await sql`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO public;`;
-    // Attempt to fix search_path at the database level if permissions allow
-    // Otherwise, it will just proceed with the table creation.
   } catch (e) {
-    console.warn("Permission repair warning:", e);
+    console.warn("基础权限修复警告（可忽略）:", e);
   }
 
-  // 2. Create Categories Table
+  // 2. 确保 UUID 扩展存在（Postgres 13+ gen_random_uuid 默认可用，此处为双重保险）
+  try {
+    await sql`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`;
+  } catch (e) {
+    console.warn("UUID扩展启用警告（若gen_random_uuid可用则无需理会）:", e);
+  }
+
+  // 3. 创建分类表
   await sql`
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
@@ -44,7 +51,7 @@ export async function initDatabase() {
     );
   `;
 
-  // 3. Create Templates Tables
+  // 4. 创建模板表
   await sql`
     CREATE TABLE IF NOT EXISTS templates (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,13 +68,12 @@ export async function initDatabase() {
     );
   `;
 
-  // Migration: Add category_id to templates if it doesn't exist (safety)
+  // 迁移：确保列存在
   try {
     await sql`ALTER TABLE templates ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL`;
-  } catch (e) {
-    console.log("Migration skip: category_id likely exists");
-  }
+  } catch (e) {}
 
+  // 5. 创建会员码和日志表
   await sql`
     CREATE TABLE IF NOT EXISTS member_codes (
       id SERIAL PRIMARY KEY,
@@ -94,7 +100,18 @@ export async function initDatabase() {
     );
   `;
 
-  // 4. Seed Initial Templates if table is empty
+  // 6. 重要：同步自增序列（解决手动导入数据后的 ID 冲突）
+  try {
+    // 同步分类表序列
+    await sql`SELECT setval('categories_id_seq', COALESCE((SELECT MAX(id) FROM categories), 1), true);`;
+    // 同步会员码表序列
+    await sql`SELECT setval('member_codes_id_seq', COALESCE((SELECT MAX(id) FROM member_codes), 1), true);`;
+    console.log("Sequences synchronized successfully");
+  } catch (e) {
+    console.warn("序列同步失败（若表内无数据则正常）:", e);
+  }
+
+  // 7. 如果表为空，插入初始数据
   const { rowCount } = await sql`SELECT id FROM templates LIMIT 1`;
   if (rowCount === 0) {
     for (const t of INITIAL_TEMPLATES) {
@@ -105,7 +122,7 @@ export async function initDatabase() {
     }
   }
 
-  // 5. Final Permission Sync
+  // 8. 再次刷新权限
   await sql`GRANT ALL ON ALL TABLES IN SCHEMA public TO public;`;
   await sql`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO public;`;
 }
@@ -181,7 +198,7 @@ export async function deleteTemplate(id: string) {
   await sql`DELETE FROM templates WHERE id = ${id}`;
 }
 
-// Member Codes (remains unchanged but included for completeness)
+// Member Codes
 export async function getAllMemberCodes() {
   const { rows } = await sql`SELECT * FROM member_codes ORDER BY created_at DESC`;
   return rows;
